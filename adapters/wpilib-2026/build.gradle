@@ -5,7 +5,8 @@ plugins {
 }
 
 def workspaceRoot = projectDir.parentFile.parentFile
-def baseRoot = new File(workspaceRoot, findProperty('mecoBaseRoot') ?: '../MecoBase-cpp')
+def basePath = findProperty('mecoBaseRoot') ?: '../MecoBase-cpp'
+def baseRoot = new File(basePath).isAbsolute() ? new File(basePath) : new File(workspaceRoot, basePath)
 def simulationRoot = file('../..')
 
 model {

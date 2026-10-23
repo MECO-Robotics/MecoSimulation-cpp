@@ -168,10 +168,10 @@ jobs:
           test -f MecoBase-cpp/src/main/include/base/SimulationRuntime.h
       - name: Build WPILib adapter Release
         shell: bash
-        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=../MecoBase-cpp --max-workers=2
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=$GITHUB_WORKSPACE/MecoBase-cpp --max-workers=2
       - name: Build WPILib adapter Debug
         shell: bash
-        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=../MecoBase-cpp --max-workers=2
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=$GITHUB_WORKSPACE/MecoBase-cpp --max-workers=2
       - name: Stage package libraries
         shell: bash
         run: |
