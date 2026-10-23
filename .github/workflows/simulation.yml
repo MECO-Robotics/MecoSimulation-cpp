@@ -126,13 +126,19 @@ jobs:
         run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
       - name: Build Base Linux desktop and roboRIO archives
         if: runner.os == 'Linux'
-        run: >-
-          ./MecoBase-cpp/gradlew -p MecoBase-cpp
-          frcBaseLinuxathenaDebugStaticLibrary
-          frcBaseLinuxathenaReleaseStaticLibrary
-          frcBaseLinuxx86-64DebugStaticLibrary
-          frcBaseLinuxx86-64ReleaseStaticLibrary
-          --max-workers=2
+        run: |
+          for attempt in 1 2 3; do
+            if ./MecoBase-cpp/gradlew -p MecoBase-cpp \
+              frcBaseLinuxathenaDebugStaticLibrary \
+              frcBaseLinuxathenaReleaseStaticLibrary \
+              frcBaseLinuxx86-64DebugStaticLibrary \
+              frcBaseLinuxx86-64ReleaseStaticLibrary \
+              --max-workers=2; then
+              exit 0
+            fi
+            if [[ "$attempt" == 3 ]]; then exit 1; fi
+            sleep 15
+          done
       - name: Build Base Windows desktop archives
         if: runner.os == 'Windows'
         shell: bash
@@ -157,10 +163,10 @@ jobs:
         run: cmake --build build/Debug --config Debug --parallel 2
       - name: Build WPILib adapter Release
         shell: bash
-        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=../../MecoBase-cpp --max-workers=2
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=../../../MecoBase-cpp --max-workers=2
       - name: Build WPILib adapter Debug
         shell: bash
-        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=../../MecoBase-cpp --max-workers=2
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=../../../MecoBase-cpp --max-workers=2
       - name: Stage package libraries
         shell: bash
         run: |
