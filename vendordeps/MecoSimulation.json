@@ -1,0 +1,35 @@
+{
+  "fileName": "MecoSimulation.json",
+  "name": "MECO Simulation 2026",
+  "version": "2026.0.1",
+  "uuid": "b4b09b34-3d47-4fea-a5f9-93a7e8d6c9b1",
+  "frcYear": "2026",
+  "mavenUrls": [
+    "https://meco-robotics.github.io/MecoSimulation-cpp/maven"
+  ],
+  "jsonUrl": "https://raw.githubusercontent.com/MECO-Robotics/MecoSimulation-cpp/wpilib-2026/vendordeps/MecoSimulation.json",
+  "javaDependencies": [],
+  "jniDependencies": [],
+  "cppDependencies": [
+    {
+      "groupId": "com.mecorobotics.sim",
+      "artifactId": "meco-simulation-cpp",
+      "version": "2026.0.1",
+      "libName": "frc_jolt",
+      "headerClassifier": "headers",
+      "sourcesClassifier": "sources",
+      "sharedLibrary": false,
+      "skipInvalidPlatforms": true,
+      "binaryPlatforms": ["linuxx86-64", "windowsx86-64"]
+    },
+    {
+      "groupId": "com.mecorobotics.sim",
+      "artifactId": "jolt-cpp",
+      "version": "2026.0.1",
+      "libName": "Jolt",
+      "sharedLibrary": false,
+      "skipInvalidPlatforms": true,
+      "binaryPlatforms": ["linuxx86-64", "windowsx86-64"]
+    }
+  ]
+}

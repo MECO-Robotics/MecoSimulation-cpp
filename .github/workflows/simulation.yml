@@ -1,0 +1,96 @@
+name: MECO Simulation
+
+on:
+  push:
+    branches: [wpilib-2026, wpilib-2027]
+    paths:
+      - '.github/workflows/simulation.yml'
+      - 'CMakeLists.txt'
+      - 'README.md'
+      - 'LICENSE.md'
+      - 'Jolt-LICENSE'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'vendordeps/**'
+      - 'scripts/**'
+  pull_request:
+    branches: [wpilib-2026, wpilib-2027]
+    paths:
+      - '.github/workflows/simulation.yml'
+      - 'CMakeLists.txt'
+      - 'README.md'
+      - 'LICENSE.md'
+      - 'Jolt-LICENSE'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'vendordeps/**'
+      - 'scripts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linuxx86-64
+          - os: windows-2022
+            platform: windowsx86-64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@v3.30.5
+      - name: Configure Release
+        run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build and test Release
+        run: |
+          cmake --build build/Release --config Release --parallel 2
+          ctest --test-dir build/Release -C Release --output-on-failure
+      - name: Configure Debug
+        run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
+      - name: Build Debug
+        run: cmake --build build/Debug --config Debug --parallel 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulation-${{ matrix.platform }}
+          path: |
+            build/Release/lib/
+            build/Debug/lib/
+          if-no-files-found: error
+
+  package:
+    if: github.ref == 'refs/heads/wpilib-2026' && github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: lukka/get-cmake@v3.30.5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: simulation-*
+          path: build/artifacts/
+          merge-multiple: false
+      - name: Normalize artifact paths
+        run: |
+          mkdir -p build/staged
+          for platform in linuxx86-64 windowsx86-64; do
+            mkdir -p "build/staged/$platform"
+            cp -a "build/artifacts/simulation-$platform/Release" "build/staged/$platform/"
+            cp -a "build/artifacts/simulation-$platform/Debug" "build/staged/$platform/"
+          done
+      - name: Assemble vendordep
+        run: python scripts/package_vendordep.py --build-root build/staged --output build/vendor-maven
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meco-simulation-vendordep-${{ github.sha }}
+          path: build/vendor-maven/
+          if-no-files-found: error
