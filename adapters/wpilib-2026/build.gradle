@@ -4,7 +4,7 @@ plugins {
     id 'edu.wpi.first.GradleRIO' version '2026.2.1'
 }
 
-def baseRoot = file(findProperty('mecoBaseRoot') ?: '../../../MecoBase-cpp')
+def baseRoot = new File(projectDir, findProperty('mecoBaseRoot') ?: '../../../../MecoBase-cpp')
 def simulationRoot = file('../..')
 
 model {
@@ -19,27 +19,23 @@ model {
                 exportedHeaders {
                     srcDir 'include'
                     include '**/*.h'
-                    srcDir "${baseRoot}/src/main/include"
-                    include 'base/**'
-                    srcDir "${baseRoot}/src/main/cpp/base/drive"
-                    include 'PortableSwerve.h'
                     srcDir "${simulationRoot}/include"
                     include 'base/sim/**'
                 }
             }
+            // The source checkout is used here only as a build-time header
+            // dependency. The published Simulation package remains self-
+            // contained and its consumer resolves Base through the vendordep.
+            binaries.all { binary ->
+                def baseInclude = new File(baseRoot, 'src/main/include').absolutePath
+                def baseDriveInclude = new File(baseRoot, 'src/main/cpp/base/drive').absolutePath
+                def simInclude = new File(simulationRoot, 'include').absolutePath
+                binary.cppCompiler.args.addAll(binary.targetPlatform.name.startsWith('windows')
+                    ? ['/I' + baseInclude, '/I' + baseDriveInclude, '/I' + simInclude]
+                    : ['-I' + baseInclude, '-I' + baseDriveInclude, '-I' + simInclude])
+            }
             wpi.cpp.vendor.cpp(it)
             wpi.cpp.deps.wpilib(it)
-        }
-    }
-}
-
-model {
-    binaries {
-        all { binary ->
-            def windows = binary.targetPlatform.name.startsWith('windows')
-            binary.cppCompiler.args.addAll(windows
-                ? ['/I' + "${baseRoot}/src/main/include", '/I' + "${baseRoot}/src/main/cpp/base/drive", '/I' + "${simulationRoot}/include"]
-                : ['-I' + "${baseRoot}/src/main/include", '-I' + "${baseRoot}/src/main/cpp/base/drive", '-I' + "${simulationRoot}/include"])
         }
     }
 }

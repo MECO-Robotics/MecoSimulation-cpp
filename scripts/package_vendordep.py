@@ -94,8 +94,24 @@ def main() -> None:
             for base in (root / "include", root / "adapters/wpilib-2026/include"):
                 for path in sorted(base.rglob("*.h")):
                     add_file(archive, path, path.relative_to(base).as_posix())
+            base_headers = root.parent / "MecoBase-cpp/src/main/include/base"
+            excluded_base_headers = {
+                "DriveTarget.h", "detail/BackgroundPriority.h", "detail/SparkControl.h"
+            }
+            for path in sorted(base_headers.rglob("*.h")):
+                relative = path.relative_to(base_headers).as_posix()
+                if relative not in excluded_base_headers:
+                    add_file(archive, path, (Path("base") / relative).as_posix())
             add_file(archive, root / "LICENSE.md", "LICENSE.md")
             add_file(archive, root / "Jolt-LICENSE", "Jolt-LICENSE")
+        with zipfile.ZipFile(directory / f"{artifact}-{VERSION}-headers.zip") as archive:
+            names = set(archive.namelist())
+            required = {"base/Drive.h", "base/PortableSwerve.h", "base/SimulationRuntime.h",
+                        "meco/sim/DriveSimulationAdapter.h"}
+            missing = sorted(required - names)
+            if missing:
+                raise ValueError("Simulation headers package is missing required public headers: " +
+                                 ", ".join(missing))
 
     with zipfile.ZipFile(adapter_dir / f"meco-simulation-wpilib-cpp-{VERSION}-sources.zip", "w") as archive:
         for base in (root / "adapters/wpilib-2026", root / "src", root / "include"):

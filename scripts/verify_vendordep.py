@@ -53,6 +53,18 @@ def main() -> None:
                 libraries = [name for name in archive.namelist() if name.endswith(expected_lib[classifier])]
                 if len(libraries) != 1:
                     raise SystemExit(f"Expected one {expected_lib[classifier]} in {path}")
+    with zipfile.ZipFile(artifact_dir / f"meco-simulation-wpilib-cpp-{VERSION}-headers.zip") as archive:
+        names = set(archive.namelist())
+        required_headers = {
+            "base/Drive.h",
+            "base/PortableSwerve.h",
+            "base/SimulationRuntime.h",
+            "meco/sim/DriveSimulationAdapter.h",
+        }
+        missing_headers = sorted(required_headers - names)
+        if missing_headers:
+            raise SystemExit("Simulation headers package is missing required public headers:\n" +
+                             "\n".join(missing_headers))
     manifest_path = root.parent / "SHA256SUMS.json"
     if not manifest_path.is_file():
         manifest_path = root / "SHA256SUMS.json"

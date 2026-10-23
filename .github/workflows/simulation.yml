@@ -161,6 +161,11 @@ jobs:
         run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
       - name: Build Debug
         run: cmake --build build/Debug --config Debug --parallel 2
+      - name: Verify pinned Base headers
+        shell: bash
+        run: |
+          test -f MecoBase-cpp/src/main/include/base/Drive.h
+          test -f MecoBase-cpp/src/main/include/base/SimulationRuntime.h
       - name: Build WPILib adapter Release
         shell: bash
         run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=../../../MecoBase-cpp --max-workers=2
