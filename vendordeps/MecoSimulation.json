@@ -13,23 +13,17 @@
   "cppDependencies": [
     {
       "groupId": "com.mecorobotics.sim",
-      "artifactId": "meco-simulation-cpp",
+      "artifactId": "meco-simulation-wpilib-cpp",
       "version": "2026.0.1",
-      "libName": "frc_jolt",
+      "libName": "mecoSimAdapter",
       "headerClassifier": "headers",
       "sourcesClassifier": "sources",
       "sharedLibrary": false,
       "skipInvalidPlatforms": true,
-      "binaryPlatforms": ["linuxx86-64", "windowsx86-64"]
-    },
-    {
-      "groupId": "com.mecorobotics.sim",
-      "artifactId": "jolt-cpp",
-      "version": "2026.0.1",
-      "libName": "Jolt",
-      "sharedLibrary": false,
-      "skipInvalidPlatforms": true,
-      "binaryPlatforms": ["linuxx86-64", "windowsx86-64"]
+      "binaryPlatforms": [
+        "linuxx86-64",
+        "windowsx86-64"
+      ]
     }
   ]
 }

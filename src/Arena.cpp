@@ -63,7 +63,7 @@ Arena::Arena(SimulationClock &clock, std::function<BodyState()> truth, bool scen
 }
 Arena::Arena(SimulationClock &clock, std::function<BodyState()> truth, ArenaScene scene, uint32_t seed,
              Vec3 robotCenterOfMass)
-    : clock_(clock), world_(RequireWorld(clock)), robotTruth_(std::move(truth)), robotCenterOfMass_(robotCenterOfMass),
+    : world_(RequireWorld(clock)), robotTruth_(std::move(truth)), robotCenterOfMass_(robotCenterOfMass),
       scene_(scene), seed_(seed)
 {
     if (!robotTruth_)
@@ -77,6 +77,30 @@ Arena::Arena(SimulationClock &clock, std::function<BodyState()> truth, ArenaScen
         Reset(seed);
         registration_ = clock.Register(
             {[this](double dt) { Before(dt); }, [this](double dt) { After(dt); }, [this] { Reset(seed_); }});
+    }
+    catch (...)
+    {
+        ClearPieces();
+        for (auto b : colliders_)
+            world_.DestroyBody(b.body);
+        throw;
+    }
+}
+Arena::Arena(SimulationWorld &world, std::function<BodyState()> truth, ArenaScene scene, uint32_t seed,
+             Vec3 robotCenterOfMass)
+    : world_(world), robotTruth_(std::move(truth)), robotCenterOfMass_(robotCenterOfMass), scene_(scene), seed_(seed)
+{
+    if (world_.Mode() == Backend::Phoenix)
+        throw std::invalid_argument("Arena requires Jolt backend");
+    if (!robotTruth_)
+        throw std::invalid_argument("Arena requires robot truth");
+    if (!Finite(robotCenterOfMass_))
+        throw std::invalid_argument("Invalid robot center of mass");
+    try
+    {
+        if (scene == ArenaScene::Generic)
+            BuildScene();
+        Reset(seed);
     }
     catch (...)
     {

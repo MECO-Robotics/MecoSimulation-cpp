@@ -1,0 +1,45 @@
+plugins {
+    id 'c'
+    id 'cpp'
+    id 'edu.wpi.first.GradleRIO' version '2026.2.1'
+}
+
+def baseRoot = file(findProperty('mecoBaseRoot') ?: '../../../MecoBase-cpp')
+def simulationRoot = file('../..')
+
+model {
+    components {
+        mecoSimAdapter(NativeLibrarySpec) {
+            targetPlatform wpi.platforms.desktop
+            sources.cpp {
+                source {
+                    srcDir 'src'
+                    include '**/*.cpp'
+                }
+                exportedHeaders {
+                    srcDir 'include'
+                    include '**/*.h'
+                    srcDir "${baseRoot}/src/main/include"
+                    include 'base/**'
+                    srcDir "${baseRoot}/src/main/cpp/base/drive"
+                    include 'PortableSwerve.h'
+                    srcDir "${simulationRoot}/include"
+                    include 'base/sim/**'
+                }
+            }
+            wpi.cpp.vendor.cpp(it)
+            wpi.cpp.deps.wpilib(it)
+        }
+    }
+}
+
+model {
+    binaries {
+        all { binary ->
+            def windows = binary.targetPlatform.name.startsWith('windows')
+            binary.cppCompiler.args.addAll(windows
+                ? ['/I' + "${baseRoot}/src/main/include", '/I' + "${baseRoot}/src/main/cpp/base/drive", '/I' + "${simulationRoot}/include"]
+                : ['-I' + "${baseRoot}/src/main/include", '-I' + "${baseRoot}/src/main/cpp/base/drive", '-I' + "${simulationRoot}/include"])
+        }
+    }
+}

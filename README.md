@@ -11,6 +11,12 @@ supported only after its clean consumer build and simulation checks pass. These
 branches share source only when the code is genuinely compatible; artifacts
 and vendordep descriptors are always year-specific.
 
+The `adapters/wpilib-2026` folder builds the optional MECO Base `Drive` bridge.
+The bridge creates a shared drive and arena simulation session on Base's fixed
+step runtime. A local clean Base plus Simulation consumer links in Debug and
+Release pass on Linux desktop. Windows CI consumer links and public Maven
+resolution remain release gates.
+
 ## Build and test
 
 ```sh
@@ -22,11 +28,37 @@ ctest --test-dir build --output-on-failure
 See [the simulation guide](docs/jolt-simulation.md) for the physics model,
 configuration, and known limits.
 
+## Install in a robot project
+
+The intended 2026 setup is MECO Base 2026.2.0 followed by MECO Simulation
+2026.0.1. Both matching coordinates are currently verified only from local
+Maven staging. The public Simulation descriptor still contains the previous
+two-library layout and its new Maven coordinates are not deployed; do not use
+the online URL until the release workflow has published and resolved this
+descriptor. The Base package alone remains sufficient for roboRIO builds.
+Simulation adds Linux and Windows desktop libraries, so desktop projects need
+both vendordeps. Do not add the Simulation package to a different WPILib year.
+
+The release workflow builds both desktop platforms, builds matching split Base
+archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
+temporary Maven repository. It links Linux and Windows Debug and Release
+consumers before its optional GitHub Pages publish job. The selected Base ref
+must contain the 2026.2.0 split package. The workflow resolves that ref once
+and uses the same commit for each build, packaging, and consumer job. Publishing
+merges the new Simulation coordinate into the existing Maven tree and verifies
+deployed checksums and clean consumers.
+Publishing requires a `v2026.*` tag, the explicit `publish` workflow input,
+GitHub Pages configured for Actions, and a `github-pages` environment with
+required reviewers configured in repository settings. The workflow exposes
+that environment as the deployment gate; this repository still needs those
+Pages and environment settings before its first release. 2027 uses a separate
+year branch and package.
+
 ## Current compatibility
 
 | WPILib year | Status | Platforms |
 | --- | --- | --- |
-| 2026 | In extraction; desktop model tests available | Linux and Windows desktop |
+| 2026 | Linux desktop consumer Debug/Release linked locally; Windows and public Maven checks pending | Linux and Windows desktop target |
 | 2027/SystemCore | In development; no compatibility claim | Not yet validated |
 
 # Simulation model configuration
@@ -35,34 +67,25 @@ Desktop practice defaults to `jolt-3d`, including the headless launcher. Set
 `FRC_SIM_PHYSICS=jolt-planar` (or headless `--backend jolt-planar`) for planar
 automation. Unset or empty `FRC_SIM_PHYSICS` selects 3D.
 
-Use the [repository quick start](../README.md#quickstart) to build and launch
-the robot simulator. This guide covers model setup and limits; see
-[AdvantageScope topics](advantagescope.md) for telemetry paths. Defaults
-demonstrate software behavior; use measured robot parameters for design studies.
+This guide covers model setup and limits. Defaults demonstrate software behavior;
+use measured robot parameters for design studies.
 
 ## macOS model workflow
 
-The standalone `simulation/` CMake project supports native Apple Silicon and Intel
-Mac builds. After installing Xcode Command Line Tools, CMake, Ninja, and Python 3, run:
+The standalone CMake project can be built on macOS with Xcode Command Line Tools,
+CMake, and a C++20 compiler. From the repository root, run:
 
 ```sh
-cmake -S simulation -B build/jolt-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build/jolt-release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/jolt-release --parallel 2
 ctest --test-dir build/jolt-release --output-on-failure
 ```
 
 These portable model checks need no WPILib, Java, vendor libraries, or Gradle.
-CI runs all three model suites in Debug/Release on each Mac architecture
-and records Release benchmark qualification against a 4 ms p99 budget. Mac CI
-uses `--report-only`: budget misses remain visible in artifacts and job summaries
-but do not override functional test results. The Intel hosted runner exceeded
-the dense-scene budget; performance on an intended practice machine requires its
-own measurement. The local benchmark CLI still enforces 4 ms by default.
 
-Full robot/HAL practice remains Windows/Linux because the pinned Phoenix C++
-libraries do not provide a macOS target. Portable Mac tests cover Jolt lifecycle,
-drivetrain physics, collisions, and piece ownership/launch; they do not validate
-Phoenix sensors/odometry, command scheduling, or mechanism IO adapters.
+The optional Phoenix/WPILib adapter is built only for Linux and Windows desktop.
+The portable physics build does not validate Phoenix sensors/odometry, command
+scheduling, or mechanism IO adapters.
 
 ## Drivetrain
 

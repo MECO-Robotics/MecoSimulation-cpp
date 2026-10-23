@@ -48,6 +48,10 @@ class Arena
           Vec3 robotCenterOfMass = {});
     Arena(SimulationClock &, std::function<BodyState()> robotTruth, ArenaScene scene, uint32_t seed = 2026,
           Vec3 robotCenterOfMass = {});
+    // Embeds arena updates in an external fixed-step owner. The owner must call
+    // BeforePhysics(), step the shared world, then call AfterPhysics().
+    Arena(SimulationWorld &, std::function<BodyState()> robotTruth, ArenaScene scene, uint32_t seed = 2026,
+          Vec3 robotCenterOfMass = {});
     ~Arena();
     Arena(const Arena &) = delete;
     Arena &operator=(const Arena &) = delete;
@@ -71,6 +75,8 @@ class Arena
     size_t HeldCount(IntakeId id = 0) const;
     bool IntakeActive(IntakeId id = 0) const;
     void Reset(uint32_t seed = 2026);
+    void BeforePhysics(double dt) { Before(dt); }
+    void AfterPhysics(double dt) { After(dt); }
 
   private:
     struct Piece
@@ -86,7 +92,6 @@ class Arena
     void After(double);
     void BuildScene();
     void ClearPieces();
-    SimulationClock &clock_;
     SimulationWorld &world_;
     std::function<BodyState()> robotTruth_;
     Vec3 robotCenterOfMass_;

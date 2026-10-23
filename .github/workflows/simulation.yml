@@ -2,7 +2,8 @@ name: MECO Simulation
 
 on:
   push:
-    branches: [wpilib-2026, wpilib-2027]
+    branches: [wpilib-2026]
+    tags: ['v2026.*']
     paths:
       - '.github/workflows/simulation.yml'
       - 'CMakeLists.txt'
@@ -11,12 +12,13 @@ on:
       - 'LICENSE.md'
       - 'Jolt-LICENSE'
       - 'include/**'
+      - 'adapters/**'
       - 'src/**'
       - 'tests/**'
       - 'vendordeps/**'
       - 'scripts/**'
   pull_request:
-    branches: [wpilib-2026, wpilib-2027]
+    branches: [wpilib-2026]
     paths:
       - '.github/workflows/simulation.yml'
       - 'CMakeLists.txt'
@@ -25,17 +27,64 @@ on:
       - 'LICENSE.md'
       - 'Jolt-LICENSE'
       - 'include/**'
+      - 'adapters/**'
       - 'src/**'
       - 'tests/**'
       - 'vendordeps/**'
       - 'scripts/**'
   workflow_dispatch:
+    inputs:
+      base_ref:
+        description: MecoBase-cpp ref containing the released 2026.2.0 split API
+        type: string
+        required: true
+        default: main
+      publish:
+        description: Publish the verified package to GitHub Pages (tag refs only)
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
 
 jobs:
+  resolve-base:
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.pin.outputs.commit }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'main' }}
+          path: MecoBase-cpp
+      - name: Pin selected Base ref to a commit
+        id: pin
+        run: echo "commit=$(git -C MecoBase-cpp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  base-vendor-cache:
+    needs: resolve-base
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ needs.resolve-base.outputs.commit }}
+          path: MecoBase-cpp
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Fetch and verify pinned Studica Windows artifacts
+        run: python MecoBase-cpp/scripts/prepare_vendor_cache.py --output MecoBase-cpp/build/vendor-cache
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: base-windows-vendor-cache
+          path: MecoBase-cpp/build/vendor-cache/
+          if-no-files-found: error
+
   build:
+    needs: [resolve-base, base-vendor-cache]
     strategy:
       fail-fast: false
       matrix:
@@ -46,8 +95,56 @@ jobs:
             platform: windowsx86-64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: lukka/get-cmake@v3.30.5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ needs.resolve-base.outputs.commit }}
+          path: MecoBase-cpp
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
+        if: runner.os == 'Windows'
+      - name: Verify split Base integration
+        run: python scripts/verify_base_compatibility.py --descriptor MecoBase-cpp/vendor/MecoBase.json --drive-header MecoBase-cpp/src/main/include/base/Drive.h
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: runner.os == 'Windows'
+        with:
+          name: base-windows-vendor-cache
+          path: MecoBase-cpp/build/vendor-cache/
+      - name: Configure pinned Studica cache for Windows builds
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "FRC_VENDOR_CACHE=$(pwd)/MecoBase-cpp/build/vendor-cache" >> "$GITHUB_ENV"
+      - name: Install roboRIO toolchain for Base archives
+        if: runner.os == 'Linux'
+        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
+      - name: Build Base Linux desktop and roboRIO archives
+        if: runner.os == 'Linux'
+        run: >-
+          ./MecoBase-cpp/gradlew -p MecoBase-cpp
+          frcBaseLinuxathenaDebugStaticLibrary
+          frcBaseLinuxathenaReleaseStaticLibrary
+          frcBaseLinuxx86-64DebugStaticLibrary
+          frcBaseLinuxx86-64ReleaseStaticLibrary
+          --max-workers=2
+      - name: Build Base Windows desktop archives
+        if: runner.os == 'Windows'
+        shell: bash
+        run: >-
+          ./MecoBase-cpp/gradlew -p MecoBase-cpp
+          frcBaseWindowsx86-64DebugStaticLibrary
+          frcBaseWindowsx86-64ReleaseStaticLibrary
+          -Ptoolchain-optional-roboRio
+          --max-workers=2
+      - name: Check benchmark report tooling
+        run: python -m unittest discover -s scripts/tests
+      - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
       - name: Configure Release
         run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - name: Build and test Release
@@ -58,41 +155,229 @@ jobs:
         run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
       - name: Build Debug
         run: cmake --build build/Debug --config Debug --parallel 2
-      - uses: actions/upload-artifact@v4
+      - name: Build WPILib adapter Release
+        shell: bash
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=../../MecoBase-cpp --max-workers=2
+      - name: Build WPILib adapter Debug
+        shell: bash
+        run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=../../MecoBase-cpp --max-workers=2
+      - name: Stage package libraries
+        shell: bash
+        run: |
+          for configuration in Release Debug; do
+            mkdir -p "build/staged/${{ matrix.platform }}/$configuration/lib"
+            find "build/$configuration" -type f \( -name '*.a' -o -name '*.lib' \) -exec cp {} "build/staged/${{ matrix.platform }}/$configuration/lib/" \;
+          done
+          cp adapters/wpilib-2026/build/libs/mecoSimAdapter/static/release/* "build/staged/${{ matrix.platform }}/Release/lib/"
+          cp adapters/wpilib-2026/build/libs/mecoSimAdapter/static/debug/* "build/staged/${{ matrix.platform }}/Debug/lib/"
+      - name: Record build provenance
+        run: python scripts/write_build_provenance.py --base-root MecoBase-cpp --platform ${{ matrix.platform }} --output build/staged/${{ matrix.platform }}/provenance.json
+      - name: Stage Base vendordep archives
+        shell: bash
+        run: |
+          if [[ "${{ matrix.platform }}" == "linuxx86-64" ]]; then
+            mkdir -p build/base-staged/linuxathena build/base-staged/linuxx86-64
+            cp -a MecoBase-cpp/build/libs/frcBase/static/linuxathena/. build/base-staged/linuxathena/
+            cp -a MecoBase-cpp/build/libs/frcBase/static/linuxx86-64/. build/base-staged/linuxx86-64/
+          else
+            mkdir -p build/base-staged/windowsx86-64
+            cp -a MecoBase-cpp/build/libs/frcBase/static/windowsx86-64/. build/base-staged/windowsx86-64/
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: simulation-${{ matrix.platform }}
-          path: |
-            build/Release/lib/
-            build/Debug/lib/
+          path: build/staged/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: base-platform-${{ matrix.platform }}
+          path: build/base-staged/
           if-no-files-found: error
 
   package:
-    if: github.ref == 'refs/heads/wpilib-2026' && github.event_name == 'workflow_dispatch'
-    needs: build
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v2026.')
+    needs: [resolve-base, build]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify release tag matches package version
+        run: python3 scripts/verify_release_tag.py --git-ref '${{ github.ref }}'
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ needs.resolve-base.outputs.commit }}
+          path: MecoBase-cpp
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
-      - uses: lukka/get-cmake@v3.30.5
-      - uses: actions/download-artifact@v4
+      - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
+      - name: Install LLVM library tool for merged Windows archive
+        run: sudo apt-get update && sudo apt-get install -y llvm-18
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: simulation-*
           path: build/artifacts/
+          merge-multiple: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: base-platform-*
+          path: build/base-artifacts/
           merge-multiple: false
       - name: Normalize artifact paths
         run: |
           mkdir -p build/staged
           for platform in linuxx86-64 windowsx86-64; do
-            mkdir -p "build/staged/$platform"
-            cp -a "build/artifacts/simulation-$platform/Release" "build/staged/$platform/"
-            cp -a "build/artifacts/simulation-$platform/Debug" "build/staged/$platform/"
+            cp -a "build/artifacts/simulation-$platform/$platform" build/staged/
           done
+          mkdir -p MecoBase-cpp/build/libs/frcBase/static
+          cp -a build/base-artifacts/base-platform-linuxx86-64/. MecoBase-cpp/build/libs/frcBase/static/
+          cp -a build/base-artifacts/base-platform-windowsx86-64/. MecoBase-cpp/build/libs/frcBase/static/
       - name: Assemble vendordep
         run: python scripts/package_vendordep.py --build-root build/staged --output build/vendor-maven
-      - uses: actions/upload-artifact@v4
+      - name: Assemble matching split Base vendordep artifacts
+        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp packageVendorMaven --max-workers=2
+      - name: Verify package descriptor and artifacts
+        run: python scripts/verify_vendordep.py --maven-root build/vendor-maven/maven
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: meco-simulation-vendordep-${{ github.sha }}
           path: build/vendor-maven/
           if-no-files-found: error
+      - name: Assemble combined local consumer repository
+        run: |
+          mkdir -p build/vendor-maven-consumer
+          cp -a build/vendor-maven/. build/vendor-maven-consumer/
+          python scripts/merge_base_maven.py --simulation-root build/vendor-maven-consumer --base-root MecoBase-cpp/build/vendor-maven
+      - name: Verify combined Maven checksums and Simulation package
+        run: python scripts/verify_vendordep.py --maven-root build/vendor-maven-consumer/maven --platform linuxx86-64
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: meco-simulation-consumer-maven-${{ github.sha }}
+          path: build/vendor-maven-consumer/
+          if-no-files-found: error
+
+  consumer-smoke:
+    needs: [resolve-base, package]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: desktop
+            configuration: Debug
+          - os: windows-2022
+            target: desktop
+            configuration: Debug
+          - os: ubuntu-24.04
+            target: desktop
+            configuration: Release
+          - os: windows-2022
+            target: desktop
+            configuration: Release
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ needs.resolve-base.outputs.commit }}
+          path: MecoBase-cpp
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
+        if: runner.os == 'Windows'
+      - name: Verify split Base integration
+        run: python scripts/verify_base_compatibility.py --descriptor MecoBase-cpp/vendor/MecoBase.json --drive-header MecoBase-cpp/src/main/include/base/Drive.h
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: meco-simulation-consumer-maven-${{ github.sha }}
+          path: build/vendor-maven/
+      - name: Link clean desktop consumer
+        run: python scripts/consumer_smoke.py --target ${{ matrix.target }} --configuration ${{ matrix.configuration }} --maven-repo build/vendor-maven/maven --meco-base-root MecoBase-cpp
+
+  publish-pages:
+    if: startsWith(github.ref, 'refs/tags/v2026.') && inputs.publish
+    needs: consumer-smoke
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: meco-simulation-vendordep-${{ github.sha }}
+          path: build/vendor-maven/
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Preserve previously released Maven coordinates
+        run: python scripts/merge_maven_pages.py --new-root build/vendor-maven --output build/pages-site --existing-site-url https://meco-robotics.github.io/MecoSimulation-cpp
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: build/pages-site/
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+
+  verify-deployment:
+    if: startsWith(github.ref, 'refs/tags/v2026.') && inputs.publish
+    needs: publish-pages
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Resolve deployed descriptor, Maven files, and checksums
+        run: python scripts/verify_deployed_vendordep.py --site-url '${{ needs.publish-pages.outputs.page_url }}'
+
+  deployed-consumer-smoke:
+    if: startsWith(github.ref, 'refs/tags/v2026.') && inputs.publish
+    needs: [resolve-base, publish-pages, verify-deployment]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            configuration: Debug
+          - os: windows-2022
+            configuration: Debug
+          - os: ubuntu-24.04
+            configuration: Release
+          - os: windows-2022
+            configuration: Release
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ needs.resolve-base.outputs.commit }}
+          path: MecoBase-cpp
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
+        if: runner.os == 'Windows'
+      - name: Link consumer against deployed vendordeps
+        run: python scripts/consumer_smoke.py --target desktop --configuration ${{ matrix.configuration }} --published --meco-base-root MecoBase-cpp
