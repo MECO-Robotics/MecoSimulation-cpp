@@ -94,7 +94,7 @@ def main() -> None:
             for base in (root / "include", root / "adapters/wpilib-2026/include"):
                 for path in sorted(base.rglob("*.h")):
                     add_file(archive, path, path.relative_to(base).as_posix())
-            base_headers = root.parent / "MecoBase-cpp/src/main/include/base"
+            base_headers = root / "MecoBase-cpp/src/main/include/base"
             excluded_base_headers = {
                 "DriveTarget.h", "detail/BackgroundPriority.h", "detail/SparkControl.h"
             }
