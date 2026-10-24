@@ -185,7 +185,18 @@ int main() {
         variable = "PATH" if os.name == "nt" else "LD_LIBRARY_PATH"
         runtime_env[variable] = os.pathsep.join(dict.fromkeys(runtime_dirs + [runtime_env.get(variable, "")]))
         if os.name == "nt":
-            print(f"Windows runtime PATH additions: {runtime_dirs}", flush=True)
+            # Windows resolves dependent DLLs beside the executable before PATH entries.
+            copied = {}
+            for directory in runtime_dirs:
+                for library in Path(directory).glob("*.dll"):
+                    destination = executable.parent / library.name
+                    if destination.exists():
+                        if destination.read_bytes() != library.read_bytes():
+                            raise RuntimeError(f"Conflicting Windows runtime DLL: {library.name}")
+                        continue
+                    shutil.copy2(library, destination)
+                    copied[library.name] = str(library)
+            print(f"Staged {len(copied)} Windows runtime DLLs beside consumer", flush=True)
         subprocess.run([str(executable)], cwd=root, env=runtime_env, check=True)
 
 
