@@ -184,6 +184,8 @@ int main() {
                 runtime_dirs.extend(str(path.parent) for path in vendor_cache.rglob("*.dll"))
         variable = "PATH" if os.name == "nt" else "LD_LIBRARY_PATH"
         runtime_env[variable] = os.pathsep.join(dict.fromkeys(runtime_dirs + [runtime_env.get(variable, "")]))
+        if os.name == "nt":
+            print(f"Windows runtime PATH additions: {runtime_dirs}", flush=True)
         subprocess.run([str(executable)], cwd=root, env=runtime_env, check=True)
 
 
