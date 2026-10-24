@@ -228,6 +228,8 @@ jobs:
       - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
       - name: Install LLVM library tool for merged Windows archive
         run: sudo apt-get update && sudo apt-get install -y llvm-18
+      - name: Install roboRIO toolchain for Base Maven packaging
+        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: simulation-*
