@@ -176,8 +176,10 @@ int main() {
         gradle_cache = Path.home() / ".gradle/caches"
         runtime_dirs = [str(path) for path in gradle_cache.rglob(platform_dir) if path.is_dir()]
         if os.name == "nt":
-            # GradleRIO extracts Windows native DLLs into the vendor-cache Maven tree.
-            vendor_cache = Path(os.environ.get("FRC_VENDOR_CACHE", ""))
+            # GradleRIO native dependencies may be unpacked into Gradle's transform cache.
+            runtime_dirs.extend(str(path.parent) for path in gradle_cache.rglob("*.dll"))
+            # Studica Windows Maven artifacts are staged separately for offline CI resolution.
+            vendor_cache = base_root / "build/vendor-cache"
             if vendor_cache.is_dir():
                 runtime_dirs.extend(str(path.parent) for path in vendor_cache.rglob("*.dll"))
         variable = "PATH" if os.name == "nt" else "LD_LIBRARY_PATH"
