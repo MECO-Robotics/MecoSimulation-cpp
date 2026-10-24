@@ -34,13 +34,14 @@ def main() -> None:
     if not plugin or not gradle:
         raise ValueError("Could not determine pinned GradleRIO or Gradle wrapper version")
     base_commit = output(["git", "rev-parse", "HEAD"], base)
-    def checkout_state(repo: Path) -> tuple[bool, str]:
-        status = output(["git", "status", "--porcelain"], repo)
-        patch = output(["git", "diff", "HEAD", "--binary"], repo)
+    def checkout_state(repo: Path, generated_paths: list[str]) -> tuple[bool, str]:
+        status = output(["git", "status", "--porcelain", "--untracked-files=no", "--", *generated_paths], repo)
+        patch = output(["git", "diff", "HEAD", "--binary", "--", *generated_paths], repo)
         return not bool(status), hashlib.sha256(patch.encode()).hexdigest()
 
-    simulation_clean, simulation_patch_sha = checkout_state(root)
-    base_clean, base_patch_sha = checkout_state(base)
+    simulation_clean, simulation_patch_sha = checkout_state(
+        root, ["build", "adapters/wpilib-2026/build", "adapters/wpilib-2026/.gradle"])
+    base_clean, base_patch_sha = checkout_state(base, ["build", ".gradle"])
     metadata = {
         "simulationCommit": os.environ.get("GITHUB_SHA", output(["git", "rev-parse", "HEAD"], root)),
         "baseCommit": base_commit,
