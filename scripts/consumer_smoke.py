@@ -175,8 +175,13 @@ int main() {
         platform_dir = "windows/x86-64/shared" if os.name == "nt" else "linux/x86-64/shared"
         gradle_cache = Path.home() / ".gradle/caches"
         runtime_dirs = [str(path) for path in gradle_cache.rglob(platform_dir) if path.is_dir()]
+        if os.name == "nt":
+            # GradleRIO extracts Windows native DLLs into the vendor-cache Maven tree.
+            vendor_cache = Path(os.environ.get("FRC_VENDOR_CACHE", ""))
+            if vendor_cache.is_dir():
+                runtime_dirs.extend(str(path.parent) for path in vendor_cache.rglob("*.dll"))
         variable = "PATH" if os.name == "nt" else "LD_LIBRARY_PATH"
-        runtime_env[variable] = os.pathsep.join(runtime_dirs + [runtime_env.get(variable, "")])
+        runtime_env[variable] = os.pathsep.join(dict.fromkeys(runtime_dirs + [runtime_env.get(variable, "")]))
         subprocess.run([str(executable)], cwd=root, env=runtime_env, check=True)
 
 
