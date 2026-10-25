@@ -31,7 +31,7 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.0 followed by MECO Simulation
-2026.0.1. Both matching coordinates are currently verified only from local
+2026.0.2. Both matching coordinates are currently verified only from local
 Maven staging. The public Simulation descriptor still contains the previous
 two-library layout and its new Maven coordinates are not deployed; do not use
 the online URL until the release workflow has published and resolved this

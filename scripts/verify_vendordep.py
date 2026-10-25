@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import zipfile
 
-VERSION = "2026.0.1"
+VERSION = "2026.0.2"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
 CLASSIFIERS = ("linuxx86-64", "windowsx86-64")
 
