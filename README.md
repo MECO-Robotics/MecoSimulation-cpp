@@ -31,11 +31,10 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.0 followed by MECO Simulation
-2026.0.2. Both matching coordinates are currently verified only from local
-Maven staging. The public Simulation descriptor still contains the previous
-two-library layout and its new Maven coordinates are not deployed; do not use
-the online URL until the release workflow has published and resolved this
-descriptor. The Base package alone remains sufficient for roboRIO builds.
+2026.0.3. The Base coordinates are published. The Simulation release is being
+verified against the public Maven host; use its online vendordep only after the
+release workflow completes. The Base package alone remains sufficient for
+roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 

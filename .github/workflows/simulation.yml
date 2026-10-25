@@ -38,7 +38,7 @@ on:
         description: MecoBase-cpp ref containing the released 2026.2.0 split API
         type: string
         required: true
-        default: main
+        default: v2026.2.0
       publish:
         description: Publish the verified package to GitHub Pages (tag refs only)
         type: boolean
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: MECO-Robotics/MecoBase-cpp
-          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'main' }}
+          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.0' }}
           path: MecoBase-cpp
       - name: Pin selected Base ref to a commit
         id: pin
@@ -340,6 +340,7 @@ jobs:
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: meco-simulation-vendordep-${{ github.sha }}
