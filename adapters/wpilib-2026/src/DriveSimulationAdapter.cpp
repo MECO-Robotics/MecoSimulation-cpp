@@ -59,6 +59,15 @@ struct DriveSimulationSession::Impl
     {
         if (backend == base::sim::Backend::Phoenix)
             throw std::invalid_argument("Jolt drive simulation requires jolt-planar or jolt-3d backend");
+        // The standalone drive world still needs a ground surface. Without it,
+        // Full3D gravity pulls the chassis through empty space and the wheel
+        // suspension rays never produce useful normal force.
+        base::sim::BodySpec floor;
+        floor.halfExtents = {100.0, 100.0, 0.05};
+        floor.mass = 0;
+        floor.friction = 1.0;
+        floor.pose.position.z = -0.05;
+        floor_ = world_.CreateBody(floor);
     }
 
     void Attach(base::Drive &drive)
@@ -166,6 +175,7 @@ struct DriveSimulationSession::Impl
     base::sim::SimulationWorld world_;
     base::sim::DrivePhysics physics_;
     base::DriveConfig config_;
+    base::sim::BodyHandle floor_{};
     base::Drive *drive_{};
     double lastYaw_{}, unwrappedYaw_{};
     std::unique_ptr<base::sim::Arena> arena_;
