@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import zipfile
 
-VERSION = "2026.0.5"
+VERSION = "2026.0.6"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),

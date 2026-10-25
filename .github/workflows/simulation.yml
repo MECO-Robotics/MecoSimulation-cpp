@@ -120,7 +120,7 @@ jobs:
       - name: Configure pinned Studica cache for Windows builds
         if: runner.os == 'Windows'
         shell: bash
-        run: echo "FRC_VENDOR_CACHE=$(pwd)/MecoBase-cpp/build/vendor-cache" >> "$GITHUB_ENV"
+        run: echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
       - name: Install roboRIO toolchain for Base archives
         if: runner.os == 'Linux'
         run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
@@ -316,7 +316,7 @@ jobs:
       - name: Set pinned Studica cache for Windows consumer runtime
         if: runner.os == 'Windows'
         shell: bash
-        run: echo "FRC_VENDOR_CACHE=$(pwd)/MecoBase-cpp/build/vendor-cache" >> "$GITHUB_ENV"
+        run: echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
       - name: Verify split Base integration
         run: python scripts/verify_base_compatibility.py --descriptor MecoBase-cpp/vendor/MecoBase.json --drive-header MecoBase-cpp/src/main/include/base/Drive.h
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
