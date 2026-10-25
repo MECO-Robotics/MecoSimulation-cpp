@@ -59,6 +59,20 @@ def main() -> None:
     id 'cpp'
     id 'edu.wpi.first.GradleRIO' version '2026.2.1'
 }
+def vendorCache = providers.environmentVariable('FRC_VENDOR_CACHE').orNull
+if (vendorCache) {
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = uri(file(vendorCache))
+                    metadataSources { mavenPom(); artifact() }
+                }
+            }
+            filter { includeGroup('com.studica.frc') }
+        }
+    }
+}
 model {
     components {
         consumer(NativeExecutableSpec) {

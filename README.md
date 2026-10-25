@@ -31,7 +31,7 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.0 followed by MECO Simulation
-2026.0.4. This release adds a ground collider to the standalone 3D drive world
+2026.0.5. This release adds a ground collider to the standalone 3D drive world
 so the chassis suspension remains supported without a season arena. The Base
 package alone remains sufficient for roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
