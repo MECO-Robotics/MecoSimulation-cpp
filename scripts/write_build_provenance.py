@@ -17,6 +17,15 @@ def output(command: list[str], cwd: Path | None = None) -> str:
     return (result.stdout or result.stderr).strip()
 
 
+def checkout_state(repo: Path, generated_paths: list[str]) -> tuple[bool, str]:
+    # Inspect source, excluding generated output. Selecting only generated paths
+    # would incorrectly attest that modified source was a clean build.
+    paths = [".", *(f":(exclude){path}" for path in generated_paths)]
+    status = output(["git", "status", "--porcelain", "--untracked-files=normal", "--", *paths], repo)
+    patch = output(["git", "diff", "HEAD", "--binary", "--", *paths], repo)
+    return not bool(status), hashlib.sha256(patch.encode()).hexdigest()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-root", type=Path, required=True)
@@ -34,13 +43,8 @@ def main() -> None:
     if not plugin or not gradle:
         raise ValueError("Could not determine pinned GradleRIO or Gradle wrapper version")
     base_commit = output(["git", "rev-parse", "HEAD"], base)
-    def checkout_state(repo: Path, generated_paths: list[str]) -> tuple[bool, str]:
-        status = output(["git", "status", "--porcelain", "--untracked-files=no", "--", *generated_paths], repo)
-        patch = output(["git", "diff", "HEAD", "--binary", "--", *generated_paths], repo)
-        return not bool(status), hashlib.sha256(patch.encode()).hexdigest()
-
     simulation_clean, simulation_patch_sha = checkout_state(
-        root, ["build", "adapters/wpilib-2026/build", "adapters/wpilib-2026/.gradle"])
+        root, ["build", "adapters/wpilib-2026/build", "adapters/wpilib-2026/.gradle", "MecoBase-cpp"])
     base_clean, base_patch_sha = checkout_state(base, ["build", ".gradle"])
     metadata = {
         "simulationCommit": os.environ.get("GITHUB_SHA", output(["git", "rev-parse", "HEAD"], root)),
