@@ -26,7 +26,16 @@ std::array<std::array<double, 2>, 4> Drive::SimulationVoltages(double dt, double
     }
     if (native_)
     {
-        native_->UpdateSimState(units::second_t{dt}, units::volt_t{busVoltage});
+        // Phoenix firmware runs asynchronously. UpdateSimState advances Phoenix's
+        // separate DCMotorSim plants and overwrites rotor/CANcoder/Pigeon truth;
+        // it must never run when an external plant supplies those measurements.
+        for (size_t i = 0; i < result.size(); ++i)
+        {
+            auto &module = native_->GetModule(i);
+            module.GetDriveMotor().GetSimState().SetSupplyVoltage(units::volt_t{busVoltage});
+            module.GetSteerMotor().GetSimState().SetSupplyVoltage(units::volt_t{busVoltage});
+            module.GetEncoder().GetSimState().SetSupplyVoltage(units::volt_t{busVoltage});
+        }
         for (size_t i = 0; i < result.size(); ++i)
         {
             auto &module = native_->GetModule(i);
