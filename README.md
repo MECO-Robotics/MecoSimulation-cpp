@@ -30,7 +30,7 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.8. Configure each module's physical drive, steer, and encoder mounting
+2026.0.9. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -51,6 +51,22 @@ deployed checksums and clean consumers.
 Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
 The `github-pages` environment is the deployment gate. 2027 uses a separate
 year branch and package.
+
+## Package ownership
+
+MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
+MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
+shared battery helper and reusable 2026 field geometry. Applications own hardware
+parameters, commands, robot-specific game-piece behavior, starting-pose policy and
+telemetry presentation. Applications must not copy `base/sim` headers or replace
+Simulation archive objects.
+
+2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
+support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
+body orientation/contact loads without adding fields to the Base ABI. Field maps
+are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
+helpers are public `meco/sim` headers. 2026.0.9 is a release candidate until its
+cross-platform package and public-Maven gates pass.
 
 ## Current compatibility
 

@@ -102,6 +102,8 @@ model {
 #include <base/PortableSwerve.h>
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
+#include <meco/sim/BatterySupply.h>
+#include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
  public:
@@ -141,6 +143,8 @@ int main() {
   base::Drive secondDrive(config, makeIO());
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
+  if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w) ||
+      base::sim::fields::rebuilt2026::FieldColliders().size() != 40) return 3;
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
   drive.ResetSimulation(frc::Pose2d{});
@@ -158,6 +162,7 @@ int main() {
     drive.SimulationPeriodic();
     const double afterFirst = base::simulation::GetSimulationRuntime().Time();
     secondDrive.SimulationPeriodic();
+    meco::sim::UpdateBatterySupply(base::simulation::GetSimulationRuntime());
     const double afterSecond = base::simulation::GetSimulationRuntime().Time();
     clockAdvancedOnce = clockAdvancedOnce && std::abs(afterFirst - before - 0.02) < 1e-9 &&
                         afterSecond == afterFirst;

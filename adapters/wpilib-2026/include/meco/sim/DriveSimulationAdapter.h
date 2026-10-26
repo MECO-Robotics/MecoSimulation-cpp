@@ -21,6 +21,8 @@ class DriveSimulationSession final : public base::DriveSimulationAdapter
     void Attach(base::Drive &) override;
     void Reset(const frc::Pose2d &) override;
     base::DriveSimulationTruth Truth() const override;
+    // Complete physical pose (including tilt) and contact loads; snapshot only.
+    base::sim::DriveTruth PhysicsTruth() const;
 
   private:
     struct Impl;

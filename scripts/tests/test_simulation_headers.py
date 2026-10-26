@@ -16,6 +16,9 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "include/base/sim/DrivePhysics.h",
                 root / "include/base/sim/SimulationWorld.h",
                 root / "adapters/wpilib-2026/include/meco/sim/DriveSimulationAdapter.h",
+                root / "adapters/wpilib-2026/include/meco/sim/BatterySupply.h",
+                root / "adapters/wpilib-2026/include/meco/sim/SimulationDiagnostics.h",
+                root / "include/base/sim/fields/Rebuilt2026.h",
             )
             for path in owned:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -31,6 +34,9 @@ class SimulationHeadersTest(unittest.TestCase):
                 "base/sim/DrivePhysics.h",
                 "base/sim/SimulationWorld.h",
                 "meco/sim/DriveSimulationAdapter.h",
+                "meco/sim/BatterySupply.h",
+                "meco/sim/SimulationDiagnostics.h",
+                "base/sim/fields/Rebuilt2026.h",
             })
 
     def test_rejects_base_headers_in_simulation_archive(self):
@@ -39,6 +45,9 @@ class SimulationHeadersTest(unittest.TestCase):
             "base/sim/DrivePhysics.h",
             "base/sim/SimulationWorld.h",
             "meco/sim/DriveSimulationAdapter.h",
+            "meco/sim/BatterySupply.h",
+            "meco/sim/SimulationDiagnostics.h",
+            "base/sim/fields/Rebuilt2026.h",
         }
         with self.assertRaisesRegex(ValueError, "Base-owned headers.*base/Drive.h"):
             validate_simulation_header_names(valid | {"base/Drive.h"})

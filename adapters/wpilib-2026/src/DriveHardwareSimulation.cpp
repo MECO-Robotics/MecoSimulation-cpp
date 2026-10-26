@@ -1,4 +1,5 @@
 #include "base/Drive.h"
+#include "meco/sim/SimulationDiagnostics.h"
 #include "base/PortableSwerve.h"
 
 #include <ctre/phoenix6/sim/ChassisReference.hpp>
@@ -44,6 +45,27 @@ std::array<std::array<double, 2>, 4> Drive::SimulationVoltages(double dt, double
             result[i] = {
                 std::clamp(module.GetDriveMotor().GetSimState().GetMotorVoltage().value(), -busVoltage, busVoltage),
                 std::clamp(module.GetSteerMotor().GetSimState().GetMotorVoltage().value(), -busVoltage, busVoltage)};
+        }
+    }
+    if (meco::sim::LatencyProbeEnabled() && native_)
+    {
+        static int64_t last = 0;
+        const auto now = nt::Now();
+        if (now - last >= 20000)
+        {
+            last = now;
+            std::array<double, 13> sample{};
+            sample[0] = now;
+            for (size_t i = 0; i < result.size(); ++i)
+            {
+                auto &state = native_->GetModule(i).GetDriveMotor().GetSimState();
+                sample[1 + 3*i] = result[i][0];
+                sample[2 + 3*i] = state.GetTorqueCurrent().value();
+                sample[3 + 3*i] = state.GetSupplyCurrent().value();
+            }
+            static auto publisher = nt::NetworkTableInstance::GetDefault()
+                .GetDoubleArrayTopic("/Diagnostics/Drive/MotorElectrical").Publish();
+            publisher.Set(sample);
         }
     }
     return result;

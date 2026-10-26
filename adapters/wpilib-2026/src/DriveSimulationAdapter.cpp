@@ -1,6 +1,7 @@
 #include "meco/sim/DriveSimulationAdapter.h"
 
 #include "base/SimulationRuntime.h"
+#include "meco/sim/SimulationDiagnostics.h"
 
 #include <frc/system/plant/DCMotor.h>
 
@@ -113,6 +114,8 @@ struct DriveSimulationSession::Impl
             WriteSensors();
     }
 
+    base::sim::DriveTruth PhysicsTruth() const { return physics_.Truth(); }
+
     base::DriveSimulationTruth Truth() const
     {
         const auto truth = physics_.Truth();
@@ -160,6 +163,25 @@ struct DriveSimulationSession::Impl
             out.steerAngle = module.steerAngle;
             out.steerVelocity = module.steerVelocity;
         }
+        if (meco::sim::LatencyProbeEnabled())
+        {
+            static int64_t last=0;
+            const auto now=nt::Now();
+            if(now-last>=20000) {
+                last=now;
+                std::array<double,25> values{};
+                values[0]=now;
+                for(size_t i=0;i<truth.modules.size();++i) {
+                    const auto&m=truth.modules[i];
+                    const std::array<double,6> module{m.normalForce,m.azimuthGroundTorque,m.azimuthContactTwist,
+                                                    m.steerMotorTorque,m.driveCurrent,m.steerCurrent};
+                    std::copy(module.begin(),module.end(),values.begin()+1+6*i);
+                }
+                static auto publisher=nt::NetworkTableInstance::GetDefault()
+                    .GetDoubleArrayTopic("/Diagnostics/Drive/AzimuthLoad").Publish();
+                publisher.Set(values);
+            }
+        }
         const auto &q = truth.body.pose.rotation;
         const double yaw = std::atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
         const double pitch = std::asin(std::clamp(2 * (q.w * q.y - q.z * q.x), -1.0, 1.0));
@@ -198,6 +220,7 @@ base::sim::Arena &DriveSimulationSession::CreateArena(base::sim::ArenaScene scen
 void DriveSimulationSession::Attach(base::Drive &drive) { impl_->Attach(drive); }
 void DriveSimulationSession::Reset(const frc::Pose2d &pose) { impl_->Reset(pose); }
 base::DriveSimulationTruth DriveSimulationSession::Truth() const { return impl_->Truth(); }
+base::sim::DriveTruth DriveSimulationSession::PhysicsTruth() const { return impl_->PhysicsTruth(); }
 
 std::unique_ptr<DriveSimulationSession> CreateDriveSimulationAdapter(const base::DriveConfig &config,
                                                                      base::sim::Backend backend)
