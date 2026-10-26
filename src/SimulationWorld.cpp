@@ -220,7 +220,7 @@ BodyHandle SimulationWorld::CreateBody(const BodySpec &s)
             throw std::invalid_argument("Bumper wall thickness closes the centre opening");
         JPH::StaticCompoundShapeSettings ring;
         auto box = [](Vec3 half) {
-            return new JPH::BoxShape(V(half), float(std::min({.005, half.x*.25, half.y*.25, half.z*.25})));
+            return new JPH::BoxShape(V(half), float(std::min({kBumperCornerRadius, half.x*.95, half.y*.95, half.z*.95})));
         };
         // Front/rear span the full width. Side segments meet them without
         // overlap, so the shell has no invisible underbody or doubled corners.

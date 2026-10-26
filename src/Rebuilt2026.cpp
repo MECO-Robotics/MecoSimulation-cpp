@@ -31,9 +31,11 @@ std::vector<base::sim::BodySpec> FieldColliders() {
         const double thickness = In(.5);
         for (double y : {kHubY-In(47+73)/2,kHubY+In(47+73)/2}) {
             for (double side : {-1.,1.}) {
-                bodies.push_back(Box(x+side*run/2,y,
+                auto ramp=Box(x+side*run/2,y,
                     height-run*std::tan(angle)/2-thickness*std::cos(angle)/2,
-                    run/std::cos(angle),In(73),thickness,side*angle));
+                    run/std::cos(angle),In(73),thickness,side*angle);
+                ramp.friction=kBumpContactFriction;
+                bodies.push_back(ramp);
             }
         }
         // Trench inner supports and overhead arms. Unlike a 2D blocking strip,

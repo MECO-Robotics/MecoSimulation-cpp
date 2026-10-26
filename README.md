@@ -30,7 +30,7 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.9. Configure each module's physical drive, steer, and encoder mounting
+2026.0.10. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -246,3 +246,7 @@ Review p99 and individual misses, configuration, contacts, and body counts
 alongside CPU/build metadata. See [the verification record](../artifacts/jolt/STATUS.md)
 for retained successful and failed evidence. Simulation acceptance does not
 establish hardware calibration, CAN timing, or physical safety.
+
+2026.0.10 lowers the estimated bumper–HDPE contact friction and rounds padded
+bumper edges while preserving the field dimensions, tire model and floor gap.
+See [bump contact validation](docs/bump-contact.md).

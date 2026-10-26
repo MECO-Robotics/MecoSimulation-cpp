@@ -1,0 +1,5 @@
+Published 2026.0.9 regression:
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Bumper must slide up, support the lifted chassis and clear the bump
+Corrected contact regression:
+cleared=1 max_body_height=0.241381 bumper_supported_unloaded_steps=267

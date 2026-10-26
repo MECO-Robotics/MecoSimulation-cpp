@@ -47,8 +47,9 @@ int main() {
         for(int i=0;i<3000;++i) {
             w.Step(.001); touched=touched || w.ContactManifoldCount()>0;
             auto s=w.ReadBody(body); const auto q=s.pose.rotation;
-            const double lowest=s.pose.position.z-.43*std::abs(2*(q.x*q.z-q.w*q.y))
-                -.43*std::abs(2*(q.y*q.z+q.w*q.x))-.06985*std::abs(1-2*(q.x*q.x+q.y*q.y));
+            const double r=kBumperCornerRadius;
+            const double lowest=s.pose.position.z-(.43-r)*std::abs(2*(q.x*q.z-q.w*q.y))
+                -(.43-r)*std::abs(2*(q.y*q.z+q.w*q.x))-(.06985-r)*std::abs(1-2*(q.x*q.x+q.y*q.y))-r;
             Check(lowest>-.005);
         }
         Check(touched && w.ReadBody(body).pose.position.z>.06);
