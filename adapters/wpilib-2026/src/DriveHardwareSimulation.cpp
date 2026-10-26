@@ -5,11 +5,16 @@
 #include <frc/RobotController.h>
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace p = ctre::phoenix6;
 
 namespace base
 {
+namespace
+{
+constexpr double kRadiansPerTurn = 6.2831853071795864769;
+}
 std::array<std::array<double, 2>, 4> Drive::SimulationVoltages(double dt, double busVoltage)
 {
     std::array<std::array<double, 2>, 4> result{};
@@ -25,6 +30,8 @@ std::array<std::array<double, 2>, 4> Drive::SimulationVoltages(double dt, double
         for (size_t i = 0; i < result.size(); ++i)
         {
             auto &module = native_->GetModule(i);
+            // Phoenix SimState returns the applied motor voltage after device
+            // configuration; electrical inversion is already reflected here.
             result[i] = {
                 std::clamp(module.GetDriveMotor().GetSimState().GetMotorVoltage().value(), -busVoltage, busVoltage),
                 std::clamp(module.GetSteerMotor().GetSimState().GetMotorVoltage().value(), -busVoltage, busVoltage)};
@@ -48,18 +55,39 @@ void Drive::ApplySimulationFeedback(const DriveSimulationFeedback &feedback)
     }
     if (!native_)
         return;
+    using Ref = p::sim::ChassisReference;
+    const auto toPhoenixOrientation = [](SimulationDeviceOrientation orientation) {
+        switch (orientation)
+        {
+        case SimulationDeviceOrientation::CounterClockwisePositive:
+            return Ref::CounterClockwise_Positive;
+        case SimulationDeviceOrientation::ClockwisePositive:
+            return Ref::Clockwise_Positive;
+        }
+        throw std::invalid_argument("Invalid simulated device orientation");
+    };
+    if (!simulationOrientationsInitialized_)
+    {
+        for (size_t i = 0; i < feedback.modules.size(); ++i)
+        {
+            auto &module = native_->GetModule(i);
+            auto &drive = module.GetDriveMotor().GetSimState();
+            auto &steer = module.GetSteerMotor().GetSimState();
+            auto &encoder = module.GetEncoder().GetSimState();
+            const auto &deviceConfig = config_.simulation.modules[i];
+            drive.Orientation = toPhoenixOrientation(deviceConfig.driveOrientation);
+            steer.Orientation = toPhoenixOrientation(deviceConfig.steerOrientation);
+            encoder.Orientation = toPhoenixOrientation(deviceConfig.encoderOrientation);
+            encoder.SensorOffset = units::turn_t{config_.modules[i].offsetTurns};
+        }
+        simulationOrientationsInitialized_ = true;
+    }
     for (size_t i = 0; i < feedback.modules.size(); ++i)
     {
         auto &module = native_->GetModule(i);
-        const auto &config = config_.modules[i];
         auto &drive = module.GetDriveMotor().GetSimState();
         auto &steer = module.GetSteerMotor().GetSimState();
         auto &encoder = module.GetEncoder().GetSimState();
-        using Ref = p::sim::ChassisReference;
-        drive.Orientation = config.driveInverted ? Ref::Clockwise_Positive : Ref::CounterClockwise_Positive;
-        steer.Orientation = config.steerInverted ? Ref::Clockwise_Positive : Ref::CounterClockwise_Positive;
-        encoder.Orientation = config.encoderInverted ? Ref::Clockwise_Positive : Ref::CounterClockwise_Positive;
-        encoder.SensorOffset = units::turn_t{config.offsetTurns};
         const auto supply = frc::RobotController::GetBatteryVoltage();
         drive.SetSupplyVoltage(supply);
         steer.SetSupplyVoltage(supply);
@@ -69,8 +97,10 @@ void Drive::ApplySimulationFeedback(const DriveSimulationFeedback &feedback)
         drive.SetRotorVelocity(units::radians_per_second_t{m.driveRotorVelocity});
         steer.SetRawRotorPosition(units::radian_t{m.steerRotorPosition});
         steer.SetRotorVelocity(units::radians_per_second_t{m.steerRotorVelocity});
-        encoder.SetRawPosition(units::radian_t{m.encoderPosition});
-        encoder.SetVelocity(units::radians_per_second_t{m.encoderVelocity});
+        // Supply physical chassis coordinates; Phoenix applies device orientation,
+        // sensor direction, and the configured magnet offset.
+        encoder.SetRawPosition(units::turn_t{m.encoderPosition / kRadiansPerTurn});
+        encoder.SetVelocity(units::turns_per_second_t{m.encoderVelocity / kRadiansPerTurn});
     }
     auto &pigeon = native_->GetPigeon2().GetSimState();
     pigeon.SetRawYaw(units::radian_t{feedback.yaw});

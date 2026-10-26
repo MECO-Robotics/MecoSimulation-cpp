@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import zipfile
 
-VERSION = "2026.0.6"
+VERSION = "2026.0.7"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
@@ -155,7 +155,7 @@ def main() -> None:
         expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
         expected_commit = {item.get("baseCommit") for item in build_provenance.values()}
         expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
-        if (len(expected_base) != 1 or expected_base != {"2026.2.0"} or
+        if (len(expected_base) != 1 or expected_base != {"2026.2.1"} or
                 len(expected_commit) != 1 or len(expected_sim_commit) != 1):
             raise ValueError("Platform builds do not share the pinned split Base version and commit")
         if not args.allow_missing_platform and any(

@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-def merge(base_root: Path, simulation_root: Path, expected_version: str = "2026.2.0") -> None:
+def merge(base_root: Path, simulation_root: Path, expected_version: str = "2026.2.1") -> None:
     base_descriptor = json.loads((base_root / "MecoBase.json").read_text(encoding="utf-8"))
     if base_descriptor.get("version") != expected_version:
         raise ValueError(f"Expected Base descriptor {expected_version}, got {base_descriptor.get('version')}")

@@ -30,10 +30,14 @@ configuration, and known limits.
 
 ## Install in a robot project
 
-The intended 2026 setup is MECO Base 2026.2.0 followed by MECO Simulation
-2026.0.6. This release adds a ground collider to the standalone 3D drive world
-so the chassis suspension remains supported without a season arena. The Base
-package alone remains sufficient for roboRIO builds.
+The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
+2026.0.7. Configure each module's physical drive, steer, and encoder mounting
+directions through Base simulation configuration. These settings are distinct
+from electrical motor inversion and are applied once when Phoenix simulation
+starts. The release workflow publishes matching Base Maven artifacts alongside
+the Simulation package.
+Release 2026.0.6 added a ground collider to the standalone 3D drive world. The
+Base package alone remains sufficient for roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 
@@ -41,15 +45,12 @@ The release workflow builds both desktop platforms, builds matching split Base
 archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
 temporary Maven repository. It links Linux and Windows Debug and Release
 consumers before its optional GitHub Pages publish job. The selected Base ref
-must contain the 2026.2.0 split package. The workflow resolves that ref once
+must contain the 2026.2.1 split package. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
-Publishing requires a `v2026.*` tag, the explicit `publish` workflow input,
-GitHub Pages configured for Actions, and a `github-pages` environment with
-required reviewers configured in repository settings. The workflow exposes
-that environment as the deployment gate; this repository still needs those
-Pages and environment settings before its first release. 2027 uses a separate
+Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
+The `github-pages` environment is the deployment gate. 2027 uses a separate
 year branch and package.
 
 ## Current compatibility
