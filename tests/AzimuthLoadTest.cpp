@@ -18,7 +18,7 @@ DrivePhysicsConfig Config() {
     c.motorKv=(5800.*2*std::acos(-1.)/60)/(12-2*c.motorResistance);
     return c;
 }
-void Step(SimulationWorld& w,DrivePhysics& d) { d.BeforePhysics(.001);w.Step(.001);d.AfterPhysics(.001); }
+void Step(SimulationWorld& w,DrivePhysics& d,double dt=.001) { d.BeforePhysics(dt);w.Step(dt);d.AfterPhysics(dt); }
 // A restrained chassis is a steering dynamometer. Moving the belt underneath
 // it imposes rolling without bypassing the motor, tire or current-limit equations.
 ModulePhysicsState Dynamometer(double mass,double rolling) {
@@ -116,13 +116,14 @@ int main() {
         Check(after.normalForce>before.normalForce*5);
         Check(energy(after)<=energy(before)*1.03);
     }
-    {
+    for(double dt : {.001,.004}) {
+        // Refined step and the actual desktop robot-period substep.
         SimulationWorld w(Backend::Planar);auto c=Config();DrivePhysics d(w,c);
         for(size_t j=0;j<4;++j)d.SetModuleVoltages(j,0,2);
-        for(int i=0;i<300;++i)Step(w,d);
+        for(int i=0;i<int(.3/dt);++i)Step(w,d,dt);
         for(size_t j=0;j<4;++j)d.SetModuleVoltages(j,0,0);
         const double initial=Energy(d.Truth(),c);double maximum=initial;
-        for(int i=0;i<2000;++i) { Step(w,d);maximum=std::max(maximum,Energy(d.Truth(),c)); }
+        for(int i=0;i<int(2./dt);++i) { Step(w,d,dt);maximum=std::max(maximum,Energy(d.Truth(),c)); }
         Check(initial>0 && maximum<initial*1.03 && Energy(d.Truth(),c)<initial*.05);
     }
     std::cout<<"Azimuth static/load, rolling, unloading, shared friction, reaction and passivity passed\n";
