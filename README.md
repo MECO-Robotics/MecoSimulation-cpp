@@ -91,20 +91,23 @@ scheduling, or mechanism IO adapters.
 (`cof`), module positions, wheel radius, drive/steer/coupling ratios, current
 limits, inversion, and CANcoder offsets. `DriveConfig::simulation` supplies
 bumper half dimensions, body-origin ride height, center of mass relative to that
-origin, roll/pitch inertia, wheel/steer inertia, tire stiffness, and suspension.
-Lengths are metres, mass kilograms, inertia kg m², and stiffness/damping use SI.
+origin, roll/pitch inertia, wheel/steer inertia and tire stiffness. Legacy
+suspension fields remain in the ABI but are unused by rigid wheel contact.
+Lengths are metres, mass kilograms, inertia kg m², and tire stiffness uses SI.
 The portable `DrivePhysicsConfig` additionally exposes motor resistance, torque
 constant, velocity constant, and friction voltage. Invalid/nonfinite physical
 parameters throw during construction.
 
 Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four downward wheel
-contact rays with spring/damper normal forces and longitudinal/lateral tire
-forces capped by available friction. Motor current and wheel inertia affect
-acceleration; applied forces act at contact points. The bumper is a box rigid
-body. Suspension rays do not model tire volume, sidewall contact, or detailed
-wheel geometry; inertia is supplied along body principal axes. This is a
-simplified tire/suspension model, not a measured tire model or an articulated
-robot model.
+contact queries at fixed, hard-mounted module positions. A projected unilateral
+normal-impulse solve supports the body against gravity without springs, suspension
+travel or static sag. The 1 cm ray extension and 0.1 mm penetration slop are
+numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
+forces are capped by the solved normal reactions. Motor current and wheel inertia
+affect acceleration; forces act at contact points. The bumper is a box rigid body.
+Contact rays do not model finite tire volume, sidewalls or detailed wheel geometry;
+inertia is supplied along body principal axes. This is an approximate rigid-contact
+tire model, not a measured tire model or an articulated robot model.
 
 Phoenix remains responsible for native controls and estimated pose. Its desktop
 transport, control, and odometry threads run asynchronously; whole-robot results

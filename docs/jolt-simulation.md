@@ -25,7 +25,7 @@ simulation device orientations. Phoenix firmware runs asynchronously without tha
 helper. Jolt is the only physical state owner. This matches the external-plant
 boundary used by [MapleSim's CTRE adapter](https://github.com/Shenzhen-Robotics-Alliance/CTRE-Swerve-MapleSim).
 
-The WPILib drive adapter adds a static ground slab at Z=0 to its otherwise empty world. This lets the 3D suspension rays support the chassis even when no season `Arena` is attached. Season field and game-piece colliders remain the consumer's responsibility.
+The WPILib drive adapter adds a static ground slab at Z=0 to its otherwise empty world. This lets the 3D rigid wheel contacts support the chassis even when no season `Arena` is attached. Season field and game-piece colliders remain the consumer's responsibility.
 
 `Arena` owns field colliders and game pieces in a `SimulationClock` world. Supply a robot-truth callback for piece interactions; its body pose and center-of-mass velocity must use the same world coordinates. Pieces, intakes, and launches are generic model primitives; season field geometry and robot-command integration belong in the consumer.
 

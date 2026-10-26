@@ -135,17 +135,23 @@ int main()
         Step(w, d, 500);
         Check(Energy(d.Truth(), c) < energy * .05);
     }
-    // Full3D springs support the chassis without chassis-floor contact.
+    // Hard-mounted wheel contacts support the chassis at the fixed geometric
+    // height regardless of load. This rejects the former spring-sag model.
+    for (double mass : {53., 106.})
     {
         SimulationWorld w(Backend::Full3D);
         Floor(w);
-        DrivePhysics d(w);
+        DrivePhysicsConfig c;
+        c.mass = mass;
+        DrivePhysics d(w, c);
         Step(w, d, 1000);
-        auto t = d.Truth();
-        double expected =
-            d.Config().suspensionRestLength - d.Config().mass * 9.80665 / (4 * d.Config().suspensionStiffness);
-        Check(std::abs(t.body.pose.position.z - expected) < .01);
+        const auto t = d.Truth();
+        Check(std::abs(t.body.pose.position.z - c.rideHeight) < .001);
         Check(std::abs(t.body.linearVelocity.z) < .01 && std::abs(t.body.pose.rotation.x) < .01);
+        double load = 0;
+        for (const auto &module : t.modules)
+            load += module.normalForce;
+        Check(std::abs(load - mass * 9.80665) < mass * 9.80665 * .01);
     }
     {
         SimulationWorld w(Backend::Full3D);

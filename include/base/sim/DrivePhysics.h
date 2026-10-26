@@ -15,6 +15,7 @@ struct DrivePhysicsConfig
     double driveRatio{6.122448979591837}, steerRatio{150.0 / 7.0}, couplingRatio{};
     double wheelInertia{.025}, steerInertia{.004};
     double friction{1.2}, longitudinalStiffness{1800}, lateralStiffness{1800};
+    // Legacy ABI fields; rigid wheel contact does not use spring/travel parameters.
     double suspensionRestLength{.30}, suspensionTravel{.15};
     double suspensionStiffness{6000}, suspensionDamping{650};
     double motorResistance{12.0 / 366}, motorKt{7.09 / 366}, motorKv{55.0};

@@ -58,10 +58,6 @@ void Validate(const DrivePhysicsConfig &c)
                             c.steerInertia,
                             c.longitudinalStiffness,
                             c.lateralStiffness,
-                            c.suspensionRestLength,
-                            c.suspensionTravel,
-                            c.suspensionStiffness,
-                            c.suspensionDamping,
                             c.motorResistance,
                             c.motorKt,
                             c.motorKv,
@@ -124,6 +120,70 @@ void DrivePhysics::BeforePhysics(double dt)
     auto body = world_.ReadBody(body_);
     auto q = body.pose.rotation;
     Vec3 down = Rotate(q, {0, 0, -1});
+    struct Contact
+    {
+        Vec3 point{}, normal{0, 0, 1}, lever{};
+        double gap{}, impulse{}, inverseMass{};
+        bool active{};
+    };
+    std::array<Contact, 4> contacts{};
+    const Quaternion inverseRotation{-q.x, -q.y, -q.z, q.w};
+    const auto inverseInertia = [&](Vec3 torque) {
+        const auto local = Rotate(inverseRotation, torque);
+        return Rotate(q, {local.x / config_.inertia.x, local.y / config_.inertia.y,
+                          local.z / config_.inertia.z});
+    };
+    if (world_.Mode() == Backend::Full3D)
+    {
+        for (size_t i = 0; i < contacts.size(); ++i)
+        {
+            auto &contact = contacts[i];
+            const auto mount = Add(body.pose.position, Rotate(q, config_.moduleLocations[i]));
+            // Fixed module-to-ground distance. The 1cm extension is speculative
+            // contact detection, not suspension travel or an elastic element.
+            const double rayLength = config_.rideHeight + .01;
+            const auto hit = world_.Raycast(mount, Scale(down, rayLength), body_);
+            if (!hit || Dot(hit->normal, Scale(down, -1)) <= .25)
+                continue;
+            contact.active = true;
+            contact.point = hit->position;
+            contact.normal = hit->normal;
+            contact.lever = Add(Add(contact.point, Scale(body.pose.position, -1)),
+                                Scale(Rotate(q, config_.centerOfMass), -1));
+            const auto foot = Add(mount, Scale(down, config_.rideHeight));
+            contact.gap = Dot(Add(foot, Scale(contact.point, -1)), contact.normal);
+            const auto angularJacobian = Cross(contact.lever, contact.normal);
+            contact.inverseMass = 1 / config_.mass +
+                Dot(angularJacobian, inverseInertia(angularJacobian));
+        }
+        // Projected Gauss-Seidel solve of unilateral rigid normal constraints.
+        // Predict gravity once, then share reaction impulses across all wheels.
+        // There is no spring, damping coefficient, preload or stored elastic energy.
+        auto linear = Add(body.linearVelocity, {0, 0, -9.80665 * dt});
+        auto angular = body.angularVelocity;
+        for (int iteration = 0; iteration < 24; ++iteration)
+        {
+            for (auto &contact : contacts)
+            {
+                if (!contact.active)
+                    continue;
+                const double normalVelocity = Dot(Add(linear, Cross(angular, contact.lever)), contact.normal);
+                // Allow approach through a positive gap. Only penetration needs
+                // numerical stabilization; the small slop is independent of load.
+                const double target = contact.gap > 0 ? -contact.gap / dt :
+                    .2 * std::max(0., -contact.gap - .0001) / dt;
+                const double next = std::max(0., contact.impulse +
+                    (target - normalVelocity) / contact.inverseMass);
+                const double delta = next - contact.impulse;
+                contact.impulse = next;
+                linear = Add(linear, Scale(contact.normal, delta / config_.mass));
+                angular = Add(angular, inverseInertia(Scale(Cross(contact.lever, contact.normal), delta)));
+            }
+        }
+        for (const auto &contact : contacts)
+            if (contact.active)
+                world_.AddForce(body_, Scale(contact.normal, contact.impulse / dt), contact.point);
+    }
     for (size_t i = 0; i < 4; ++i)
     {
         auto &m = modules_[i];
@@ -132,27 +192,15 @@ void DrivePhysics::BeforePhysics(double dt)
         Vec3 mount = Add(body.pose.position, lever);
         Vec3 velocity =
             Add(body.linearVelocity, Cross(body.angularVelocity, Add(lever, Scale(Rotate(q, c.centerOfMass), -1))));
-        Vec3 contact = Add(mount, Scale(down, c.suspensionRestLength));
+        Vec3 contact = Add(mount, Scale(down, c.rideHeight));
         Vec3 normal{0, 0, 1};
         double normalForce = c.mass * 9.80665 / 4;
         if (world_.Mode() == Backend::Full3D)
         {
-            normalForce = 0;
-            const double rayLength = c.suspensionRestLength + c.suspensionTravel;
-            auto hit = world_.Raycast(mount, Scale(down, rayLength), body_);
-            if (hit)
-            {
-                normal = hit->normal;
-                contact = hit->position;
-                // Only supporting faces act as tire contacts. Walls remain bumper contacts.
-                if (Dot(normal, Scale(down, -1)) > .25)
-                {
-                    double compression = c.suspensionRestLength - hit->fraction * rayLength;
-                    normalForce = std::max(0.0, c.suspensionStiffness * compression -
-                                                    c.suspensionDamping * Dot(velocity, normal));
-                    world_.AddForce(body_, Scale(normal, normalForce), mount);
-                }
-            }
+            const auto &support = contacts[i];
+            normal = support.normal;
+            contact = support.active ? support.point : contact;
+            normalForce = support.impulse / dt;
         }
         // Steering motor sees coupling torque from the drive motor as dictated by
         // rotor angle = driveRatio*wheelAngle + couplingRatio*steerAngle.
