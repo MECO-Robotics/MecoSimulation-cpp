@@ -65,8 +65,8 @@ Simulation archive objects.
 support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
 body orientation/contact loads without adding fields to the Base ABI. Field maps
 are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
-helpers are public `meco/sim` headers. 2026.0.9 is a release candidate until its
-cross-platform package and public-Maven gates pass.
+helpers are public `meco/sim` headers. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
+see the [release validation](docs/releases/2026.0.9.md).
 
 ## Current compatibility
 
