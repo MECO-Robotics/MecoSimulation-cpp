@@ -129,6 +129,8 @@ int main() {
   {
   base::DriveConfig config{};
   config.backend = base::DriveBackend::SparkMaxNavX;
+  config.simulation.modules[0].driveOrientation =
+      base::SimulationDeviceOrientation::CounterClockwisePositive;
   auto makeIO = [] {
     base::SwerveIO io;
     for (auto& module : io.modules) module = std::make_unique<Module>();

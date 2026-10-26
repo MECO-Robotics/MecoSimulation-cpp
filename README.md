@@ -13,9 +13,8 @@ and vendordep descriptors are always year-specific.
 
 The `adapters/wpilib-2026` folder builds the optional MECO Base `Drive` bridge.
 The bridge creates a shared drive and arena simulation session on Base's fixed
-step runtime. A local clean Base plus Simulation consumer links in Debug and
-Release pass on Linux desktop. Windows CI consumer links and public Maven
-resolution remain release gates.
+step runtime. The Simulation vendordep exports its own physics and adapter
+headers; the matching Base vendordep supplies `base/...` headers.
 
 ## Build and test
 
@@ -31,7 +30,7 @@ configuration, and known limits.
 ## Install in a robot project
 
 The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.7. Configure each module's physical drive, steer, and encoder mounting
+2026.0.8. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -57,7 +56,7 @@ year branch and package.
 
 | WPILib year | Status | Platforms |
 | --- | --- | --- |
-| 2026 | Linux desktop consumer Debug/Release linked locally; Windows and public Maven checks pending | Linux and Windows desktop target |
+| 2026 | Public Linux and Windows Debug/Release consumer links pass; rebuilt virtual-circle trace has module azimuth error P95 below 0.04 rad | Linux and Windows desktop target |
 | 2027/SystemCore | In development; no compatibility claim | Not yet validated |
 
 # Simulation model configuration

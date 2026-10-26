@@ -13,7 +13,9 @@ import shutil
 import subprocess
 import zipfile
 
-VERSION = "2026.0.7"
+from simulation_headers import collect_simulation_headers, validate_simulation_header_names
+
+VERSION = "2026.0.8"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
@@ -91,27 +93,13 @@ def main() -> None:
 
     for directory, artifact in ((adapter_dir, "meco-simulation-wpilib-cpp"),):
         with zipfile.ZipFile(directory / f"{artifact}-{VERSION}-headers.zip", "w") as archive:
-            for base in (root / "include", root / "adapters/wpilib-2026/include"):
-                for path in sorted(base.rglob("*.h")):
-                    add_file(archive, path, path.relative_to(base).as_posix())
-            base_headers = root / "MecoBase-cpp/src/main/include/base"
-            excluded_base_headers = {
-                "DriveTarget.h", "detail/BackgroundPriority.h", "detail/SparkControl.h"
-            }
-            for path in sorted(base_headers.rglob("*.h")):
-                relative = path.relative_to(base_headers).as_posix()
-                if relative not in excluded_base_headers:
-                    add_file(archive, path, (Path("base") / relative).as_posix())
+            entries = collect_simulation_headers(root)
+            for path, relative in entries:
+                add_file(archive, path, relative)
             add_file(archive, root / "LICENSE.md", "LICENSE.md")
             add_file(archive, root / "Jolt-LICENSE", "Jolt-LICENSE")
         with zipfile.ZipFile(directory / f"{artifact}-{VERSION}-headers.zip") as archive:
-            names = set(archive.namelist())
-            required = {"base/Drive.h", "base/PortableSwerve.h", "base/SimulationRuntime.h",
-                        "meco/sim/DriveSimulationAdapter.h"}
-            missing = sorted(required - names)
-            if missing:
-                raise ValueError("Simulation headers package is missing required public headers: " +
-                                 ", ".join(missing))
+            validate_simulation_header_names(archive.namelist())
 
     with zipfile.ZipFile(adapter_dir / f"meco-simulation-wpilib-cpp-{VERSION}-sources.zip", "w") as archive:
         for base in (root / "adapters/wpilib-2026", root / "src", root / "include"):

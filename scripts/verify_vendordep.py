@@ -9,7 +9,9 @@ import json
 from pathlib import Path
 import zipfile
 
-VERSION = "2026.0.7"
+from simulation_headers import validate_simulation_header_names
+
+VERSION = "2026.0.8"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
 CLASSIFIERS = ("linuxx86-64", "windowsx86-64")
 
@@ -54,17 +56,10 @@ def main() -> None:
                 if len(libraries) != 1:
                     raise SystemExit(f"Expected one {expected_lib[classifier]} in {path}")
     with zipfile.ZipFile(artifact_dir / f"meco-simulation-wpilib-cpp-{VERSION}-headers.zip") as archive:
-        names = set(archive.namelist())
-        required_headers = {
-            "base/Drive.h",
-            "base/PortableSwerve.h",
-            "base/SimulationRuntime.h",
-            "meco/sim/DriveSimulationAdapter.h",
-        }
-        missing_headers = sorted(required_headers - names)
-        if missing_headers:
-            raise SystemExit("Simulation headers package is missing required public headers:\n" +
-                             "\n".join(missing_headers))
+        try:
+            validate_simulation_header_names(archive.namelist())
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
     manifest_path = root.parent / "SHA256SUMS.json"
     if not manifest_path.is_file():
         manifest_path = root / "SHA256SUMS.json"
