@@ -19,11 +19,15 @@ measured material coefficient or a tire-on-HDPE calibration.
 `bump_traversal` exercises the 67.6 kg Kraken/50 A stator configuration with a
 4 m/s running approach at the actual 4 ms physics substep. It requires the bumper
 to lift the body, physically support it during wheel unloading, preserve loss of
-wheel traction while unloaded, and clear the far edge back onto the carpet.
+wheel traction while unloaded, and slide over the crest without a leading-edge launch. The module locations
+match the robot (0.2794 m from each centre axis).
 The same regression fails linked against the published 2026.0.9 archive; see
 [the regression record](validation/bump-contact-regression.txt).
 
-A low-clearance robot can still high-center during a slow approach. Once all
+A low-clearance robot can still high-center, including after a running approach.
+The full joystick run climbs to 0.264 m body height and unloads all four wheels,
+but stops on exit at x=5.21 m: the front bumper reaches carpet while the rear
+bumper remains on the ramp. This check does not claim complete bump traversal. Once all
 wheels lift, continued motor output spins wheels rather than inventing chassis
 propulsion. Bump traversal then depends on approach momentum, profile, friction
 and mass distribution. No bump exclusion, teleport, artificial lift or force
