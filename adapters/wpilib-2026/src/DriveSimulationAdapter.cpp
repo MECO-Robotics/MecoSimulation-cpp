@@ -36,15 +36,18 @@ base::sim::DrivePhysicsConfig MakePhysicsConfig(const base::DriveConfig &config)
     out.suspensionTravel = s.suspensionTravel;
     out.suspensionStiffness = s.suspensionStiffness;
     out.suspensionDamping = s.suspensionDamping;
-    out.driveCurrentLimit = config.driveCurrent;
+    // Phoenix's driveCurrent is a battery-side supply limit. Wheel torque is
+    // limited by SlipCurrent (stator current), not by that supply setting.
+    out.driveCurrentLimit = config.backend == base::DriveBackend::SparkMaxNavX
+                                ? config.driveCurrent : config.slipCurrent;
     out.steerCurrentLimit = config.steerCurrent;
-    if (config.backend == base::DriveBackend::SparkMaxNavX)
-    {
-        const auto motor = frc::DCMotor::NEO(1);
-        out.motorResistance = motor.R.value();
-        out.motorKt = motor.Kt.value();
-        out.motorKv = motor.Kv.value();
-    }
+    // Native Phoenix swerve module requests enable FOC. Match that plant;
+    // SparkMax uses the NEO model and its motor-side SmartCurrentLimit.
+    const auto motor = config.backend == base::DriveBackend::SparkMaxNavX
+                           ? frc::DCMotor::NEO(1) : frc::DCMotor::KrakenX60FOC(1);
+    out.motorResistance = motor.R.value();
+    out.motorKt = motor.Kt.value();
+    out.motorKv = motor.Kv.value();
     for (std::size_t i = 0; i < out.moduleLocations.size(); ++i)
         out.moduleLocations[i] = {config.modules[i].xMeters, config.modules[i].yMeters, 0};
     return out;

@@ -94,6 +94,13 @@ bumper half dimensions, body-origin ride height, center of mass relative to that
 origin, roll/pitch inertia, wheel/steer inertia and tire stiffness. Legacy
 suspension fields remain in the ABI but are unused by rigid wheel contact.
 Lengths are metres, mass kilograms, inertia kg m², and tire stiffness uses SI.
+The WPILib adapter uses Kraken X60 FOC constants for native Phoenix swerve
+(which enables FOC), with `slipCurrent` as the motor-side torque limit.
+`driveCurrent` is Phoenix's separate battery-side supply limit; it must not be
+used as stator current. SparkMax uses NEO constants and its motor-side
+`driveCurrent` SmartCurrentLimit. Native controller output still includes its
+configured limits. The electrical plant produces speed-dependent motoring and
+braking torque from voltage and back-EMF rather than a fixed deceleration rate.
 The portable `DrivePhysicsConfig` additionally exposes motor resistance, torque
 constant, velocity constant, and friction voltage. Invalid/nonfinite physical
 parameters throw during construction.
