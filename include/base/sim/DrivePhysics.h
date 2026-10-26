@@ -22,6 +22,9 @@ struct DrivePhysicsConfig
     double driveCurrentLimit{80}, steerCurrentLimit{40}, frictionVoltage{.1};
     std::array<Vec3, 4> moduleLocations{
         {{.33655, .33655, 0}, {.33655, -.33655, 0}, {-.33655, .33655, 0}, {-.33655, -.33655, 0}}};
+    // Estimated rectangular contact patch and elastic shear travel at breakaway.
+    // These extend the physics ABI: rebuild every direct DrivePhysics owner.
+    double wheelWidth{.0508}, contactPatchLength{.020}, contactShearDeflection{.001};
 };
 struct ModulePhysicsState
 {
@@ -29,6 +32,7 @@ struct ModulePhysicsState
     double driveRotorAngle{}, driveRotorVelocity{}, steerRotorAngle{}, steerRotorVelocity{};
     double longitudinalSlip{}, longitudinalForce{}, lateralForce{}, normalForce{};
     double driveCurrent{}, steerCurrent{}; // signed winding current, amperes
+    double azimuthContactTwist{}, azimuthGroundTorque{}, steerMotorTorque{};
 };
 struct DriveTruth
 {

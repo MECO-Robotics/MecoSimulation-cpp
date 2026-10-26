@@ -62,7 +62,10 @@ void Validate(const DrivePhysicsConfig &c)
                             c.motorKt,
                             c.motorKv,
                             c.driveCurrentLimit,
-                            c.steerCurrentLimit};
+                            c.steerCurrentLimit,
+                            c.wheelWidth,
+                            c.contactPatchLength,
+                            c.contactShearDeflection};
     for (double x : positive)
         if (!std::isfinite(x) || x <= 0)
             throw std::invalid_argument("Drive physics requires positive finite physical parameters");
@@ -72,20 +75,6 @@ void Validate(const DrivePhysicsConfig &c)
     for (auto p : c.moduleLocations)
         if (!Finite(p))
             throw std::invalid_argument("Invalid module location");
-}
-// Backward Euler on rotor electrical damping, with current-limited branch solved
-// consistently. This is passive at zero volts even for high steering reductions.
-double MotorStep(double omega, double dt, double inertia, double ratio, double external, double voltage,
-                 double offsetRotorSpeed, double limit, const DrivePhysicsConfig &c)
-{
-    const double a = ratio * c.motorKt / c.motorResistance;
-    const double damping = a * ratio / c.motorKv;
-    double next =
-        (inertia * omega + dt * (a * (voltage - offsetRotorSpeed / c.motorKv) + external)) / (inertia + dt * damping);
-    double current = (voltage - (ratio * next + offsetRotorSpeed) / c.motorKv) / c.motorResistance;
-    if (std::abs(current) > limit)
-        next = omega + dt * (ratio * c.motorKt * std::copysign(limit, current) + external) / inertia;
-    return next;
 }
 } // namespace
 DrivePhysics::DrivePhysics(SimulationWorld &world, DrivePhysicsConfig config) : world_(world), config_(config)
@@ -205,78 +194,100 @@ void DrivePhysics::BeforePhysics(double dt)
             contact = support.active ? support.point : contact;
             normalForce = support.impulse / dt;
         }
-        // Steering motor sees coupling torque from the drive motor as dictated by
-        // rotor angle = driveRatio*wheelAngle + couplingRatio*steerAngle.
-        double driveV = FrictionVoltage(voltages_[i][0], c.frictionVoltage);
-        double steerV = FrictionVoltage(voltages_[i][1], c.frictionVoltage);
-        double driveCurrent =
-            std::clamp((driveV - (c.driveRatio * m.wheelVelocity + c.couplingRatio * m.steerVelocity) / c.motorKv) /
-                           c.motorResistance,
-                       -c.driveCurrentLimit, c.driveCurrentLimit);
-        m.steerVelocity = MotorStep(m.steerVelocity, dt, c.steerInertia, c.steerRatio,
-                                    c.couplingRatio * c.motorKt * driveCurrent, steerV, 0, c.steerCurrentLimit, c);
-        m.steerAngle += m.steerVelocity * dt;
-        Vec3 longitudinal = Rotate(q, {std::cos(m.steerAngle), std::sin(m.steerAngle), 0});
+        const double driveV = FrictionVoltage(voltages_[i][0], c.frictionVoltage);
+        const double steerV = FrictionVoltage(voltages_[i][1], c.frictionVoltage);
+        // Freeze a midpoint azimuth basis for this implicit substep. Wheel spin
+        // and azimuth speed are solved together; neither sensor is a setpoint.
+        const double angle = m.steerAngle + .5 * m.steerVelocity * dt;
+        Vec3 longitudinal = Rotate(q, {std::cos(angle), std::sin(angle), 0});
         longitudinal = Unit(Add(longitudinal, Scale(normal, -Dot(longitudinal, normal))));
-        Vec3 lateral = Unit(Cross(normal, longitudinal));
-        Vec3 contactVelocity =
-            Add(body.linearVelocity, Cross(body.angularVelocity, Add(Add(contact, Scale(body.pose.position, -1)),
-                                                                     Scale(Rotate(q, c.centerOfMass), -1))));
-        double forward = Dot(contactVelocity, longitudinal), side = Dot(contactVelocity, lateral);
-        // Solve motor current limiting and combined tire saturation at the final
-        // loaded wheel speed. Selecting the electrical branch at an unloaded speed
-        // can exceed the current limit once tire reaction slows the wheel.
+        const Vec3 lateral = Unit(Cross(normal, longitudinal));
+        const Vec3 contactVelocity = Add(body.linearVelocity,
+            Cross(body.angularVelocity, Add(Add(contact, Scale(body.pose.position, -1)),
+                                             Scale(Rotate(q, c.centerOfMass), -1))));
+        const double forward = Dot(contactVelocity, longitudinal), side = Dot(contactVelocity, lateral);
+        const Vec3 steerAxis=Scale(down,-1);
+        const double axisProjection=Dot(steerAxis,normal);
+        const double bodyYawRate = Dot(body.angularVelocity, normal);
         const double maximum = c.friction * normalForce;
-        const double freeLateral = -c.lateralStiffness * side / (1 + dt * c.lateralStiffness * 4 / c.mass);
-        auto forces = [&](double omega) {
-            double fx = c.longitudinalStiffness * (omega * c.wheelRadius - forward);
-            double fy = freeLateral;
-            const double magnitude = std::hypot(fx, fy);
-            if (magnitude > maximum && magnitude > 0)
-            {
-                fx *= maximum / magnitude;
-                fy *= maximum / magnitude;
+        // RMS lever of a uniform rectangular patch (2x2 Gauss quadrature).
+        const double patchRadius = std::hypot(c.wheelWidth, c.contactPatchLength) / std::sqrt(12.);
+        const double torsionStiffness = maximum * patchRadius * patchRadius / c.contactShearDeflection;
+        const double oldTwist = torsionStiffness > 0 ? m.azimuthContactTwist : 0.;
+        auto driveCurrent = [&](double wheel, double steer) {
+            return std::clamp((driveV-(c.driveRatio*wheel+c.couplingRatio*steer)/c.motorKv)/c.motorResistance,
+                              -c.driveCurrentLimit,c.driveCurrentLimit);
+        };
+        auto steerCurrent = [&](double steer) {
+            return std::clamp((steerV-c.steerRatio*steer/c.motorKv)/c.motorResistance,
+                              -c.steerCurrentLimit,c.steerCurrentLimit);
+        };
+        auto motorTorque = [&](double wheel, double steer) {
+            return c.steerRatio*c.motorKt*steerCurrent(steer) +
+                   c.couplingRatio*c.motorKt*driveCurrent(wheel,steer);
+        };
+        auto wrench = [&](double wheel, double steer) {
+            const double rolling = .5*(std::abs(wheel*c.wheelRadius)+std::abs(forward));
+            // Elastic shear gives static holding torque. Rolling renews the
+            // contact patch, relaxing that shear over one patch transit time.
+            const double twist = (oldTwist+dt*(steer*axisProjection+bodyYawRate)) /
+                                 (1+dt*rolling/c.contactPatchLength);
+            double fx = c.longitudinalStiffness*(wheel*c.wheelRadius-forward);
+            double fy = -c.lateralStiffness*side/(1+dt*c.lateralStiffness*4/c.mass);
+            double torque = -torsionStiffness*twist;
+            // One friction-wrench budget: steering cannot consume a second,
+            // independent mu*N on top of saturated translational traction.
+            const double magnitude = std::sqrt(fx*fx+fy*fy+torque*torque/(patchRadius*patchRadius));
+            if(magnitude>maximum && magnitude>0) {
+                const double scale=maximum/magnitude;
+                fx*=scale; fy*=scale; torque*=scale;
             }
-            return std::array<double, 2>{fx, fy};
+            return std::array<double,3>{fx,fy,torque};
         };
-        auto current = [&](double omega) {
-            return std::clamp((driveV - (c.driveRatio * omega + c.couplingRatio * m.steerVelocity) / c.motorKv) /
-                                  c.motorResistance,
-                              -c.driveCurrentLimit, c.driveCurrentLimit);
+        const double previousWheel=m.wheelVelocity, previousSteer=m.steerVelocity;
+        auto solveWheel = [&](double steer) {
+            const double delta=dt*(c.driveRatio*c.motorKt*c.driveCurrentLimit+c.wheelRadius*maximum)/c.wheelInertia;
+            double lo=previousWheel-delta, hi=previousWheel+delta;
+            for(int iteration=0;iteration<36;++iteration) {
+                const double wheel=(lo+hi)*.5;
+                const double residual=c.wheelInertia*(wheel-previousWheel)/dt -
+                    c.driveRatio*c.motorKt*driveCurrent(wheel,steer)+c.wheelRadius*wrench(wheel,steer)[0];
+                if(residual>0) hi=wheel; else lo=wheel;
+            }
+            return (lo+hi)*.5;
         };
-        // The backward-Euler residual is monotone: inertia, electrical damping,
-        // and longitudinal tire damping all oppose motion. Torque bounds bracket
-        // its unique zero even across both piecewise saturation transitions.
-        const double maxDelta =
-            dt * (c.driveRatio * c.motorKt * c.driveCurrentLimit + c.wheelRadius * maximum) / c.wheelInertia;
-        double lower = m.wheelVelocity - maxDelta, upper = m.wheelVelocity + maxDelta;
-        const double previous = m.wheelVelocity;
-        for (int iteration = 0; iteration < 44; ++iteration)
-        {
-            const double omega = (lower + upper) * .5;
-            const double residual = c.wheelInertia * (omega - previous) / dt -
-                                    c.driveRatio * c.motorKt * current(omega) + c.wheelRadius * forces(omega)[0];
-            if (residual > 0)
-                upper = omega;
-            else
-                lower = omega;
+        const double steerDelta=dt*(c.steerRatio*c.motorKt*c.steerCurrentLimit+
+            std::abs(c.couplingRatio)*c.motorKt*c.driveCurrentLimit+maximum*patchRadius)/c.steerInertia;
+        double lo=previousSteer-steerDelta, hi=previousSteer+steerDelta;
+        for(int iteration=0;iteration<36;++iteration) {
+            const double steer=(lo+hi)*.5, wheel=solveWheel(steer);
+            const double residual=c.steerInertia*(steer-previousSteer)/dt -
+                                  motorTorque(wheel,steer)-axisProjection*wrench(wheel,steer)[2];
+            if(residual>0) hi=steer; else lo=steer;
         }
-        m.wheelVelocity = (lower + upper) * .5;
-        const auto tire = forces(m.wheelVelocity);
-        const double fx = tire[0], fy = tire[1];
-        m.driveCurrent = current(m.wheelVelocity);
-        m.steerCurrent = std::clamp((steerV - c.steerRatio * m.steerVelocity / c.motorKv) / c.motorResistance,
-                                    -c.steerCurrentLimit, c.steerCurrentLimit);
-        m.wheelAngle += m.wheelVelocity * dt;
-        m.driveRotorAngle = c.driveRatio * m.wheelAngle + c.couplingRatio * m.steerAngle;
-        m.driveRotorVelocity = c.driveRatio * m.wheelVelocity + c.couplingRatio * m.steerVelocity;
-        m.steerRotorAngle = c.steerRatio * m.steerAngle;
-        m.steerRotorVelocity = c.steerRatio * m.steerVelocity;
-        m.longitudinalSlip = c.wheelRadius * m.wheelVelocity - forward;
-        m.normalForce = normalForce;
-        m.longitudinalForce = fx;
-        m.lateralForce = fy;
-        world_.AddForce(body_, Add(Scale(longitudinal, fx), Scale(lateral, fy)), contact);
+        m.steerVelocity=(lo+hi)*.5;
+        m.wheelVelocity=solveWheel(m.steerVelocity);
+        const auto tire=wrench(m.wheelVelocity,m.steerVelocity);
+        m.azimuthGroundTorque=tire[2];
+        // Plastic return mapping dissipates excess shear at the joint friction
+        // limit. Unloaded wheels carry no remembered carpet twist.
+        m.azimuthContactTwist=torsionStiffness>0 ? -tire[2]/torsionStiffness : 0.;
+        m.steerMotorTorque=motorTorque(m.wheelVelocity,m.steerVelocity);
+        m.driveCurrent=driveCurrent(m.wheelVelocity,m.steerVelocity);
+        m.steerCurrent=steerCurrent(m.steerVelocity);
+        m.steerAngle+=m.steerVelocity*dt;
+        m.wheelAngle+=m.wheelVelocity*dt;
+        m.driveRotorAngle=c.driveRatio*m.wheelAngle+c.couplingRatio*m.steerAngle;
+        m.driveRotorVelocity=c.driveRatio*m.wheelVelocity+c.couplingRatio*m.steerVelocity;
+        m.steerRotorAngle=c.steerRatio*m.steerAngle;
+        m.steerRotorVelocity=c.steerRatio*m.steerVelocity;
+        m.longitudinalSlip=c.wheelRadius*m.wheelVelocity-forward;
+        m.normalForce=normalForce; m.longitudinalForce=tire[0]; m.lateralForce=tire[1];
+        world_.AddForce(body_,Add(Scale(longitudinal,tire[0]),Scale(lateral,tire[1])),contact);
+        // Equal/opposite actuator/coupling reaction on the chassis. Ground
+        // torsion loads the module; do not apply it a second time to the body.
+        world_.AddTorque(body_,Add(Scale(normal,m.azimuthGroundTorque),
+            Scale(steerAxis,-m.steerMotorTorque-axisProjection*m.azimuthGroundTorque)));
     }
 }
 void DrivePhysics::AfterPhysics(double dt)

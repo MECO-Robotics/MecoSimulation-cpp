@@ -125,6 +125,27 @@ Contact rays do not model finite tire volume, sidewalls or detailed wheel geomet
 inertia is supplied along body principal axes. This is an approximate rigid-contact
 tire model, not a measured tire model or an articulated robot model.
 
+Azimuth load uses an estimated rectangular tire contact patch. Its elastic shear
+stores a small static twist; rolling renews that shear over the patch transit time.
+Twisting and longitudinal/lateral forces share one friction-wrench ellipsoid, with
+capacity based on the actual normal reaction (zero when unloaded). Steering and
+wheel speeds are solved implicitly together, retaining current limits and drive/
+steer coupling. The chassis receives the opposite actuator reaction; terrain-normal
+torsion is projected onto the steering axis, including the remaining constrained
+moment on a tilted chassis. This is an approximate lumped contact model, not a
+measured TPU tire model or full articulated drivetrain.
+
+`DrivePhysicsConfig` now includes `wheelWidth` (default .0508 m),
+`contactPatchLength` (.020 m), and `contactShearDeflection` (.001 m at breakaway).
+Module truth exposes contact twist, ground torsion and combined azimuth actuator
+(steering motor plus drive coupling) torque. The patch RMS radius is
+`sqrt((width^2 + length^2)/12)`; stiffness is `mu*N*radius^2/shearDeflection`.
+Plastic return mapping limits stored shear at sliding. The defaults are explicit
+estimates; wheel-load, speed and carpet/tread measurements are needed to calibrate.
+These added configuration/state fields change the **DrivePhysics ABI**: rebuild
+all direct owners, including the WPILib session adapter and tests, together. The
+`SimulationWorld` and base robot interfaces retain their prior layouts.
+
 Phoenix remains responsible for native controls and estimated pose. Its desktop
 transport, control, and odometry threads run asynchronously; whole-robot results
 are not bitwise deterministic. Before constructing native modules, the desktop drivetrain verifies a
