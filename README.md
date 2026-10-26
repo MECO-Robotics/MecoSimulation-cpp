@@ -111,7 +111,16 @@ normal-impulse solve supports the body against gravity without springs, suspensi
 travel or static sag. The 1 cm ray extension and 0.1 mm penetration slop are
 numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
 forces are capped by the solved normal reactions. Motor current and wheel inertia
-affect acceleration; forces act at contact points. The bumper is a box rigid body.
+affect acceleration; forces act at contact points. The bumper is one rigid body with four compound box segments forming a hollow
+perimeter (nominal 3.5-inch depth, reduced for very small test bodies). Its centre
+and half-height come from body ride height and bumper half extents; configure
+these together with the relative CoM to preserve the intended world CoM height.
+The shell contacts ground, slopes and obstacles through Jolt, independently of
+wheel-support rays. The centre opening does not create an invisible belly plate.
+Bumper friction is 0.65 with zero restitution; Jolt combines material friction.
+This is rigid contact, not measured foam compression or impact-energy absorption.
+`BodySpec::Shape::BumperRing` uses `radius` as wall thickness and preserves the
+existing structure layout; invalid thickness which closes the centre is rejected.
 Contact rays do not model finite tire volume, sidewalls or detailed wheel geometry;
 inertia is supplied along body principal axes. This is an approximate rigid-contact
 tire model, not a measured tire model or an articulated robot model.

@@ -96,7 +96,10 @@ DrivePhysics::DrivePhysics(SimulationWorld &world, DrivePhysicsConfig config) : 
     spec.inertia = config_.inertia;
     spec.centerOfMass = config_.centerOfMass;
     spec.halfExtents = config_.bumperHalfExtents;
-    spec.friction = .2;
+    spec.shape = BodySpec::Shape::BumperRing;
+    // Nominal 3.5-inch bumper depth. Retain an opening for smaller test bodies.
+    spec.radius = std::min(.0889, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
+    spec.friction = .65;
     spec.planar = world.Mode() == Backend::Planar;
     spec.pose.position.z = config_.rideHeight;
     body_ = world_.CreateBody(spec);

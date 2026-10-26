@@ -38,11 +38,12 @@ struct BodySpec
     enum class Shape
     {
         Box,
-        Sphere
+        Sphere,
+        BumperRing // Four rectangular perimeter segments, hollow at the centre.
     };
     Shape shape{Shape::Box};
     Vec3 halfExtents{0.5, 0.5, 0.5};
-    double radius{0.1};
+    double radius{0.1}; // Sphere radius, or BumperRing wall thickness; metres.
     double mass{};  // zero creates a static collider
     Vec3 inertia{}; // zero selects shape-derived inertia
     Vec3 centerOfMass{};

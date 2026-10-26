@@ -14,6 +14,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 #include <algorithm>
@@ -210,8 +211,33 @@ BodyHandle SimulationWorld::CreateBody(const BodySpec &s)
     if (s.shape == BodySpec::Shape::Box)
         shape = new JPH::BoxShape(V(s.halfExtents), float(std::min({0.05, s.halfExtents.x * .5, s.halfExtents.y * .5,
                                                                     s.halfExtents.z * .5})));
-    else
+    else if (s.shape == BodySpec::Shape::Sphere)
         shape = new JPH::SphereShape(float(s.radius));
+    else if (s.shape == BodySpec::Shape::BumperRing)
+    {
+        const double t = s.radius;
+        if (t >= std::min(s.halfExtents.x, s.halfExtents.y))
+            throw std::invalid_argument("Bumper wall thickness closes the centre opening");
+        JPH::StaticCompoundShapeSettings ring;
+        auto box = [](Vec3 half) {
+            return new JPH::BoxShape(V(half), float(std::min({.005, half.x*.25, half.y*.25, half.z*.25})));
+        };
+        // Front/rear span the full width. Side segments meet them without
+        // overlap, so the shell has no invisible underbody or doubled corners.
+        for (double sign : {-1., 1.})
+        {
+            ring.AddShape(JPH::Vec3(float(sign*(s.halfExtents.x-t/2)), 0, 0), JPH::Quat::sIdentity(),
+                          box({t/2, s.halfExtents.y, s.halfExtents.z}));
+            ring.AddShape(JPH::Vec3(0, float(sign*(s.halfExtents.y-t/2)), 0), JPH::Quat::sIdentity(),
+                          box({s.halfExtents.x-t, t/2, s.halfExtents.z}));
+        }
+        auto result = ring.Create();
+        if (result.HasError())
+            throw std::invalid_argument("Invalid bumper compound: " + std::string(result.GetError().c_str()));
+        shape = result.Get();
+    }
+    else
+        throw std::invalid_argument("Unknown simulation body shape");
     if (s.centerOfMass.x || s.centerOfMass.y || s.centerOfMass.z)
         shape = new JPH::OffsetCenterOfMassShape(shape, V(s.centerOfMass));
     JPH::BodyCreationSettings c(shape, JPH::RVec3(V(s.pose.position)), Q(s.pose.rotation),
