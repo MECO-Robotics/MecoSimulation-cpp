@@ -1,5 +1,7 @@
-Published 2026.0.9 regression:
+Published 2026.0.9 archive, same 67.6 kg configuration and carpet friction 1.0:
+final_x=4.52849 cleared=0 max_body_height=0.45771 bumper_supported_unloaded_steps=943
 terminate called after throwing an instance of 'std::runtime_error'
   what():  Bumper must slide up, support the lifted chassis and clear the bump
+
 Corrected contact regression:
-cleared=1 max_body_height=0.241381 bumper_supported_unloaded_steps=267
+final_x=5.80132 cleared=1 max_body_height=0.257532 bumper_supported_unloaded_steps=156

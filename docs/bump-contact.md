@@ -10,9 +10,9 @@ to 95% of each segment half dimension. Outer dimensions, hollow center, robot
 mass/inertia, floor clearance and hard-mounted wheel geometry are unchanged.
 This is an estimated contact profile, not a foam spring/compression model.
 
-Only HDPE bump collider material friction changes from 1.0 to 0.035. Jolt's
+Only HDPE bump collider material friction changes from 1.0 to 0.010. Jolt's
 geometric-mean combine with the bumper's 0.65 produces an estimated pair sliding
-coefficient of 0.151. Carpet and other obstacles keep their existing material
+coefficient of 0.081. Carpet and other obstacles keep their existing material
 settings. The separate tire traction model is unchanged; this value is not a
 measured material coefficient or a tire-on-HDPE calibration.
 

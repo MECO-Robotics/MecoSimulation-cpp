@@ -11,7 +11,7 @@ inline constexpr double kRedHubX = 11.9154194;
 inline constexpr double kHubY = 4.0346376;
 inline constexpr double kStartingLineX = kBlueHubX - .5969;
 // Estimated HDPE sliding material: Jolt combines with bumper .65 as
-// sqrt(.035*.65) = .151. Tire traction uses its separate wheel model.
-inline constexpr double kBumpContactFriction = .035;
+// sqrt(.010*.65) = .081. Tire traction uses its separate wheel model.
+inline constexpr double kBumpContactFriction = .010;
 std::vector<BodySpec> FieldColliders();
 }

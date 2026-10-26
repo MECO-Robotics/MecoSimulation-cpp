@@ -7,7 +7,7 @@
 using namespace base::sim;
 int main() {
     SimulationWorld world(Backend::Full3D);
-    BodySpec floor;floor.halfExtents={20,20,.05};floor.pose.position.z=-.05;world.CreateBody(floor);
+    BodySpec floor;floor.halfExtents={20,20,.05};floor.pose.position.z=-.05;floor.friction=1;world.CreateBody(floor);
     for(const auto& collider:fields::rebuilt2026::FieldColliders())world.CreateBody(collider);
     DrivePhysicsConfig c;c.mass=67.6;c.friction=2.1;c.bumperHalfExtents.z=.06985;
     c.rideHeight=.0762;c.centerOfMass.z=.2238;c.driveRatio=5.8909090909090915;
@@ -40,7 +40,7 @@ int main() {
         }
         if(truth.body.pose.position.x>5.8 && truth.body.pose.position.z<.09) {cleared=true;break;}
     }
-    std::cout<<"cleared="<<cleared<<" max_body_height="<<maxHeight
+    std::cout<<"final_x="<<drive.Truth().body.pose.position.x<<" cleared="<<cleared<<" max_body_height="<<maxHeight
              <<" bumper_supported_unloaded_steps="<<supportedWithWheelsLifted<<std::endl;
     if(!cleared || maxHeight<.18 || supportedWithWheelsLifted<5)
         throw std::runtime_error("Bumper must slide up, support the lifted chassis and clear the bump");
