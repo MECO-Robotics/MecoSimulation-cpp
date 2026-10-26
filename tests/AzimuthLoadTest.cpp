@@ -97,6 +97,26 @@ int main() {
         Check(std::abs(h)<1e-5 && axial<-.001);
     }
     {
+        // A larger support impulse must not manufacture stored tire energy by
+        // multiplying an already strained patch's stiffness. Vertical impact
+        // energy is not an unmodeled source of azimuth spring energy.
+        SimulationWorld w(Backend::Full3D);BodySpec floor;floor.halfExtents={5,5,.05};floor.pose.position.z=-.05;w.CreateBody(floor);
+        auto c=Config();DrivePhysics d(w,c);const auto held=w.ReadBody(d.Body());
+        for(int i=0;i<500;++i) {
+            w.SetBodyState(d.Body(),held);d.SetModuleVoltages(0,0,.3);Step(w,d);
+        }
+        const auto before=d.Truth().modules[0];
+        const double r=std::hypot(c.wheelWidth,c.contactPatchLength)/std::sqrt(12.);
+        auto energy=[&](const ModulePhysicsState&m) {
+            return .5*c.steerInertia*m.steerVelocity*m.steerVelocity+
+                .5*c.friction*m.normalForce*r*r/c.contactShearDeflection*m.azimuthContactTwist*m.azimuthContactTwist;
+        };
+        auto impact=held;impact.linearVelocity.z=-.5;w.SetBodyState(d.Body(),impact);
+        d.SetModuleVoltages(0,0,0);Step(w,d);const auto after=d.Truth().modules[0];
+        Check(after.normalForce>before.normalForce*5);
+        Check(energy(after)<=energy(before)*1.03);
+    }
+    {
         SimulationWorld w(Backend::Planar);auto c=Config();DrivePhysics d(w,c);
         for(size_t j=0;j<4;++j)d.SetModuleVoltages(j,0,2);
         for(int i=0;i<300;++i)Step(w,d);

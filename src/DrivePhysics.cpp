@@ -213,7 +213,11 @@ void DrivePhysics::BeforePhysics(double dt)
         // RMS lever of a uniform rectangular patch (2x2 Gauss quadrature).
         const double patchRadius = std::hypot(c.wheelWidth, c.contactPatchLength) / std::sqrt(12.);
         const double torsionStiffness = maximum * patchRadius * patchRadius / c.contactShearDeflection;
-        const double oldTwist = torsionStiffness > 0 ? m.azimuthContactTwist : 0.;
+        // Normal-load changes are not an unmodeled energy source. Preserve at
+        // most the prior shear moment when stiffness rises; unloading relaxes
+        // stiffness without increasing deflection. A lifted patch forgets shear.
+        const double oldTwist = torsionStiffness > 0 ? m.azimuthContactTwist *
+            std::min(1., m.normalForce / normalForce) : 0.;
         auto driveCurrent = [&](double wheel, double steer) {
             return std::clamp((driveV-(c.driveRatio*wheel+c.couplingRatio*steer)/c.motorKv)/c.motorResistance,
                               -c.driveCurrentLimit,c.driveCurrentLimit);

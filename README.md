@@ -140,7 +140,9 @@ measured TPU tire model or full articulated drivetrain.
 Module truth exposes contact twist, ground torsion and combined azimuth actuator
 (steering motor plus drive coupling) torque. The patch RMS radius is
 `sqrt((width^2 + length^2)/12)`; stiffness is `mu*N*radius^2/shearDeflection`.
-Plastic return mapping limits stored shear at sliding. The defaults are explicit
+Plastic return mapping limits stored shear at sliding. When normal load increases,
+carried-over twist is rescaled to preserve at most the prior shear moment, avoiding
+unmodeled spring-energy creation from a stiffness jump. The defaults are explicit
 estimates; wheel-load, speed and carpet/tread measurements are needed to calibrate.
 These added configuration/state fields change the **DrivePhysics ABI**: rebuild
 all direct owners, including the WPILib session adapter and tests, together. The
