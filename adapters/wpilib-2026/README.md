@@ -14,3 +14,11 @@ WPILib BatterySim: 12 V open circuit, 0.020 ohm pack resistance. Optional
 auxiliary load. No discharge curve, regeneration, branch wiring losses, breaker
 thermal behavior or automatic brownout-output behavior is added by this helper.
 The runtime still defaults to fixed 12 V unless the application calls the helper.
+
+`SimulationDiagnostics.h` exports opt-in latency, motor-electrical and azimuth
+contact diagnostics (`FRC_SIM_LATENCY_PROBE`). Applications call its loop probes
+around scheduling and may call `PublishDriverStationPacket()` once per desktop
+loop to decouple HAL joystick packet publication from SimGUI redraw frequency.
+`FRC_SIM_DS_PACKET_CLOCK=0` disables the latter. These helpers do not step plants.
+`DriveSimulationSession::PhysicsTruth()` returns full physical orientation and
+module contact loads; applications do not need to replace hardware feedback code.
