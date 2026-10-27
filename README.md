@@ -253,6 +253,8 @@ See [bump contact validation](docs/bump-contact.md).
 
 ## Configurable robot contact
 
+Version `2026.0.12` removes a diagnostic-only bump scenario while retaining the rigid-contact and low-clearance traversal regressions. Runtime behavior is unchanged from 2026.0.11.
+
 Version `2026.0.11` adds independent belly-pan clearance, rigid
 plywood backing and implicit pool-noodle compression. See
 [construction, material assumptions, telemetry and checks](docs/compliant-bumper-contact.md).

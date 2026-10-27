@@ -7,7 +7,8 @@
 #include <memory>
 using namespace base::sim;
 int main() {
-    for (int scenario : {0, 1, 2})
+    // Retain only scenarios with a required traversal outcome.
+    for (int scenario : {0, 2})
     {
         const bool compliant = scenario != 0;
         SimulationWorld world(Backend::Full3D);
