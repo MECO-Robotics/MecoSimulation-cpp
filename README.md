@@ -11,6 +11,11 @@ supported only after its clean consumer build and simulation checks pass. These
 branches share source only when the code is genuinely compatible; artifacts
 and vendordep descriptors are always year-specific.
 
+The `adapters/wpilib-2026` folder builds the optional MECO Base `Drive` bridge.
+The bridge creates a shared drive and arena simulation session on Base's fixed
+step runtime. The Simulation vendordep exports its own physics and adapter
+headers; the matching Base vendordep supplies `base/...` headers.
+
 ## Build and test
 
 ```sh
@@ -22,11 +27,52 @@ ctest --test-dir build --output-on-failure
 See [the simulation guide](docs/jolt-simulation.md) for the physics model,
 configuration, and known limits.
 
+## Install in a robot project
+
+The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
+2026.0.10. Configure each module's physical drive, steer, and encoder mounting
+directions through Base simulation configuration. These settings are distinct
+from electrical motor inversion and are applied once when Phoenix simulation
+starts. The release workflow publishes matching Base Maven artifacts alongside
+the Simulation package.
+Release 2026.0.6 added a ground collider to the standalone 3D drive world. The
+Base package alone remains sufficient for roboRIO builds.
+Simulation adds Linux and Windows desktop libraries, so desktop projects need
+both vendordeps. Do not add the Simulation package to a different WPILib year.
+
+The release workflow builds both desktop platforms, builds matching split Base
+archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
+temporary Maven repository. It links Linux and Windows Debug and Release
+consumers before its optional GitHub Pages publish job. The selected Base ref
+must contain the 2026.2.1 split package. The workflow resolves that ref once
+and uses the same commit for each build, packaging, and consumer job. Publishing
+merges the new Simulation coordinate into the existing Maven tree and verifies
+deployed checksums and clean consumers.
+Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
+The `github-pages` environment is the deployment gate. 2027 uses a separate
+year branch and package.
+
+## Package ownership
+
+MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
+MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and reusable 2026 field geometry. Applications own hardware
+parameters, commands, robot-specific game-piece behavior, starting-pose policy and
+telemetry presentation. Applications must not copy `base/sim` headers or replace
+Simulation archive objects.
+
+2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
+support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
+body orientation/contact loads without adding fields to the Base ABI. Field maps
+are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
+helpers are public `meco/sim` headers. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
+see the [release validation](docs/releases/2026.0.9.md).
+
 ## Current compatibility
 
 | WPILib year | Status | Platforms |
 | --- | --- | --- |
-| 2026 | In extraction; desktop model tests available | Linux and Windows desktop |
+| 2026 | Public Linux and Windows Debug/Release consumer links pass; rebuilt virtual-circle trace has module azimuth error P95 below 0.04 rad | Linux and Windows desktop target |
 | 2027/SystemCore | In development; no compatibility claim | Not yet validated |
 
 # Simulation model configuration
@@ -35,34 +81,25 @@ Desktop practice defaults to `jolt-3d`, including the headless launcher. Set
 `FRC_SIM_PHYSICS=jolt-planar` (or headless `--backend jolt-planar`) for planar
 automation. Unset or empty `FRC_SIM_PHYSICS` selects 3D.
 
-Use the [repository quick start](../README.md#quickstart) to build and launch
-the robot simulator. This guide covers model setup and limits; see
-[AdvantageScope topics](advantagescope.md) for telemetry paths. Defaults
-demonstrate software behavior; use measured robot parameters for design studies.
+This guide covers model setup and limits. Defaults demonstrate software behavior;
+use measured robot parameters for design studies.
 
 ## macOS model workflow
 
-The standalone `simulation/` CMake project supports native Apple Silicon and Intel
-Mac builds. After installing Xcode Command Line Tools, CMake, Ninja, and Python 3, run:
+The standalone CMake project can be built on macOS with Xcode Command Line Tools,
+CMake, and a C++20 compiler. From the repository root, run:
 
 ```sh
-cmake -S simulation -B build/jolt-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build/jolt-release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/jolt-release --parallel 2
 ctest --test-dir build/jolt-release --output-on-failure
 ```
 
 These portable model checks need no WPILib, Java, vendor libraries, or Gradle.
-CI runs all three model suites in Debug/Release on each Mac architecture
-and records Release benchmark qualification against a 4 ms p99 budget. Mac CI
-uses `--report-only`: budget misses remain visible in artifacts and job summaries
-but do not override functional test results. The Intel hosted runner exceeded
-the dense-scene budget; performance on an intended practice machine requires its
-own measurement. The local benchmark CLI still enforces 4 ms by default.
 
-Full robot/HAL practice remains Windows/Linux because the pinned Phoenix C++
-libraries do not provide a macOS target. Portable Mac tests cover Jolt lifecycle,
-drivetrain physics, collisions, and piece ownership/launch; they do not validate
-Phoenix sensors/odometry, command scheduling, or mechanism IO adapters.
+The optional Phoenix/WPILib adapter is built only for Linux and Windows desktop.
+The portable physics build does not validate Phoenix sensors/odometry, command
+scheduling, or mechanism IO adapters.
 
 ## Drivetrain
 
@@ -70,20 +107,62 @@ Phoenix sensors/odometry, command scheduling, or mechanism IO adapters.
 (`cof`), module positions, wheel radius, drive/steer/coupling ratios, current
 limits, inversion, and CANcoder offsets. `DriveConfig::simulation` supplies
 bumper half dimensions, body-origin ride height, center of mass relative to that
-origin, roll/pitch inertia, wheel/steer inertia, tire stiffness, and suspension.
-Lengths are metres, mass kilograms, inertia kg m², and stiffness/damping use SI.
+origin, roll/pitch inertia, wheel/steer inertia and tire stiffness. Legacy
+suspension fields remain in the ABI but are unused by rigid wheel contact.
+Lengths are metres, mass kilograms, inertia kg m², and tire stiffness uses SI.
+The WPILib adapter uses Kraken X60 FOC constants for native Phoenix swerve
+(which enables FOC), with `slipCurrent` as the motor-side torque limit.
+`driveCurrent` is Phoenix's separate battery-side supply limit; it must not be
+used as stator current. SparkMax uses NEO constants and its motor-side
+`driveCurrent` SmartCurrentLimit. Native controller output still includes its
+configured limits. The electrical plant produces speed-dependent motoring and
+braking torque from voltage and back-EMF rather than a fixed deceleration rate.
 The portable `DrivePhysicsConfig` additionally exposes motor resistance, torque
 constant, velocity constant, and friction voltage. Invalid/nonfinite physical
 parameters throw during construction.
 
-Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four downward wheel
-contact rays with spring/damper normal forces and longitudinal/lateral tire
-forces capped by available friction. Motor current and wheel inertia affect
-acceleration; applied forces act at contact points. The bumper is a box rigid
-body. Suspension rays do not model tire volume, sidewall contact, or detailed
-wheel geometry; inertia is supplied along body principal axes. This is a
-simplified tire/suspension model, not a measured tire model or an articulated
-robot model.
+Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four finite-cylinder wheel
+contact queries at fixed, hard-mounted module positions. A projected unilateral
+normal-impulse solve supports the body against gravity without springs, suspension
+travel or static sag. The 1 cm query margin and 0.1 mm penetration slop are
+numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
+forces are capped by the solved normal reactions. Motor current and wheel inertia
+affect acceleration; forces act at contact points. The bumper is one rigid body with four compound box segments forming a hollow
+perimeter (nominal 3.5-inch depth, reduced for very small test bodies). Its centre
+and half-height come from body ride height and bumper half extents; configure
+these together with the relative CoM to preserve the intended world CoM height.
+The shell contacts ground, slopes and obstacles through Jolt, independently of
+wheel-support queries. The centre opening does not create an invisible belly plate.
+Bumper friction is 0.65 with zero restitution; Jolt combines material friction.
+This is rigid contact, not measured foam compression or impact-energy absorption.
+`BodySpec::Shape::BumperRing` uses `radius` as wall thickness and preserves the
+existing structure layout; invalid thickness which closes the centre is rejected.
+Cylinder queries model finite tire volume, but not tire deformation, individual spikes or sidewalls;
+inertia is supplied along body principal axes. This is an approximate rigid-contact
+tire model, not a measured tire model or an articulated robot model.
+
+Azimuth load uses an estimated rectangular tire contact patch. Its elastic shear
+stores a small static twist; rolling renews that shear over the patch transit time.
+Twisting and longitudinal/lateral forces share one friction-wrench ellipsoid, with
+capacity based on the actual normal reaction (zero when unloaded). Steering and
+wheel speeds are solved implicitly together, retaining current limits and drive/
+steer coupling. The chassis receives the opposite actuator reaction; terrain-normal
+torsion is projected onto the steering axis, including the remaining constrained
+moment on a tilted chassis. This is an approximate lumped contact model, not a
+measured TPU tire model or full articulated drivetrain.
+
+`DrivePhysicsConfig` now includes `wheelWidth` (default .0508 m),
+`contactPatchLength` (.020 m), and `contactShearDeflection` (.001 m at breakaway).
+Module truth exposes contact twist, ground torsion and combined azimuth actuator
+(steering motor plus drive coupling) torque. The patch RMS radius is
+`sqrt((width^2 + length^2)/12)`; stiffness is `mu*N*radius^2/shearDeflection`.
+Plastic return mapping limits stored shear at sliding. When normal load increases,
+carried-over twist is rescaled to preserve at most the prior shear moment, avoiding
+unmodeled spring-energy creation from a stiffness jump. The defaults are explicit
+estimates; wheel-load, speed and carpet/tread measurements are needed to calibrate.
+These added configuration/state fields change the **DrivePhysics ABI**: rebuild
+all direct owners, including the WPILib session adapter and tests, together. The
+`SimulationWorld` and base robot interfaces retain their prior layouts.
 
 Phoenix remains responsible for native controls and estimated pose. Its desktop
 transport, control, and odometry threads run asynchronously; whole-robot results
@@ -167,3 +246,22 @@ Review p99 and individual misses, configuration, contacts, and body counts
 alongside CPU/build metadata. See [the verification record](../artifacts/jolt/STATUS.md)
 for retained successful and failed evidence. Simulation acceptance does not
 establish hardware calibration, CAN timing, or physical safety.
+
+2026.0.10 lowers the estimated bumper–HDPE contact friction and rounds padded
+bumper edges while preserving the field dimensions, tire model and floor gap.
+See [bump contact validation](docs/bump-contact.md).
+
+## Configurable robot contact
+
+Version `2026.0.12` removes a diagnostic-only bump scenario while retaining the rigid-contact and low-clearance traversal regressions. Runtime behavior is unchanged from 2026.0.11.
+
+Version `2026.0.11` adds independent belly-pan clearance, rigid
+plywood backing and implicit pool-noodle compression. See
+[construction, material assumptions, telemetry and checks](docs/compliant-bumper-contact.md).
+The legacy adapter overload retains its rigid-contact behavior.
+
+`meco/sim/SimulationPose.h` provides `FloorReferencedRobotPose` with a body-local
+height offset. `meco/sim/SimulatedVision.h` provides `VisibleTags` with camera
+mount, field layout, full horizontal/vertical angles and maximum range supplied
+by the caller. These ideal geometric helpers do not model occlusion or noise;
+sensor settings and alignment policy remain application-owned.

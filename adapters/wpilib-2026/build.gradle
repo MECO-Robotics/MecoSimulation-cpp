@@ -1,0 +1,43 @@
+plugins {
+    id 'c'
+    id 'cpp'
+    id 'edu.wpi.first.GradleRIO' version '2026.2.1'
+}
+
+def workspaceRoot = projectDir.parentFile.parentFile
+def basePath = findProperty('mecoBaseRoot') ?: '../MecoBase-cpp'
+def baseRoot = new File(basePath).isAbsolute() ? new File(basePath) : new File(workspaceRoot, basePath)
+def simulationRoot = file('../..')
+
+model {
+    components {
+        mecoSimAdapter(NativeLibrarySpec) {
+            targetPlatform wpi.platforms.desktop
+            sources.cpp {
+                source {
+                    srcDir 'src'
+                    include '**/*.cpp'
+                }
+                exportedHeaders {
+                    srcDir 'include'
+                    include '**/*.h'
+                    srcDir "${simulationRoot}/include"
+                    include 'base/sim/**'
+                }
+            }
+            // The source checkout is used here only as a build-time header
+            // dependency. The published Simulation package remains self-
+            // contained and its consumer resolves Base through the vendordep.
+            binaries.all { binary ->
+                def baseInclude = new File(baseRoot, 'src/main/include').absolutePath
+                def baseDriveInclude = new File(baseRoot, 'src/main/cpp/base/drive').absolutePath
+                def simInclude = new File(simulationRoot, 'include').absolutePath
+                binary.cppCompiler.args.addAll(binary.targetPlatform.name.startsWith('windows')
+                    ? ['/I' + baseInclude, '/I' + baseDriveInclude, '/I' + simInclude]
+                    : ['-I' + baseInclude, '-I' + baseDriveInclude, '-I' + simInclude])
+            }
+            wpi.cpp.vendor.cpp(it)
+            wpi.cpp.deps.wpilib(it)
+        }
+    }
+}

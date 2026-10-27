@@ -1,0 +1,10 @@
+Published 2026.0.9 archive, same 67.6 kg configuration, module coordinates +/-0.2794 m
+and carpet friction 1.0; 4 m/s running approach:
+final_x=4.45577 rode_bump=0 max_body_height=0.457034 bumper_supported_unloaded_steps=943
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Bumper must slide over the crest and support the lifted chassis without a leading-edge launch
+
+Corrected contact regression:
+final_x=4.95288 rode_bump=1 max_body_height=0.253388 bumper_supported_unloaded_steps=756
+
+Full clearance is not required or claimed: the 0.25-inch shell can high-center on exit.

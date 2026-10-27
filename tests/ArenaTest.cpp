@@ -184,6 +184,26 @@ int main()
             Step(clock, 1);
             clock.World()->DestroyBody(external);
         }
+        {
+            SimulationWorld world(Backend::Planar);
+            BodyState robot;
+            Arena arena(world, [&] { return robot; }, ArenaScene::Empty);
+            IntakeConfig intake;
+            intake.localPose.position = {0, 0, 0.12};
+            intake.halfExtents = {1, 1, 1};
+            arena.SetIntake(intake);
+            PieceSpec piece;
+            piece.pose.position.z = 0.12;
+            arena.Spawn(piece);
+            arena.SetIntakeActive(true);
+            for (int i = 0; i < 5; ++i)
+            {
+                arena.BeforePhysics(.004);
+                world.Step(.004);
+                arena.AfterPhysics(.004);
+            }
+            Check(arena.HeldCount() == 1, "external fixed-step owner advances arena intake behavior");
+        }
         std::cout << "Arena tests passed\n";
     }
     catch (const std::exception &e)

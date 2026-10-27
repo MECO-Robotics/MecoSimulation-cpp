@@ -1,5 +1,6 @@
 #pragma once
 #include "base/sim/SimulationWorld.h"
+#include "base/sim/RobotContactConfig.h"
 #include <array>
 #include <cstddef>
 
@@ -15,12 +16,16 @@ struct DrivePhysicsConfig
     double driveRatio{6.122448979591837}, steerRatio{150.0 / 7.0}, couplingRatio{};
     double wheelInertia{.025}, steerInertia{.004};
     double friction{1.2}, longitudinalStiffness{1800}, lateralStiffness{1800};
+    // Legacy ABI fields; rigid wheel contact does not use spring/travel parameters.
     double suspensionRestLength{.30}, suspensionTravel{.15};
     double suspensionStiffness{6000}, suspensionDamping{650};
     double motorResistance{12.0 / 366}, motorKt{7.09 / 366}, motorKv{55.0};
     double driveCurrentLimit{80}, steerCurrentLimit{40}, frictionVoltage{.1};
     std::array<Vec3, 4> moduleLocations{
         {{.33655, .33655, 0}, {.33655, -.33655, 0}, {-.33655, .33655, 0}, {-.33655, -.33655, 0}}};
+    // Estimated rectangular contact patch and elastic shear travel at breakaway.
+    // These extend the physics ABI: rebuild every direct DrivePhysics owner.
+    double wheelWidth{.0508}, contactPatchLength{.020}, contactShearDeflection{.001};
 };
 struct ModulePhysicsState
 {
@@ -28,18 +33,22 @@ struct ModulePhysicsState
     double driveRotorAngle{}, driveRotorVelocity{}, steerRotorAngle{}, steerRotorVelocity{};
     double longitudinalSlip{}, longitudinalForce{}, lateralForce{}, normalForce{};
     double driveCurrent{}, steerCurrent{}; // signed winding current, amperes
+    double azimuthContactTwist{}, azimuthGroundTorque{}, steerMotorTorque{};
 };
 struct DriveTruth
 {
     BodyState body;
     std::array<ModulePhysicsState, 4> modules{};
     double timestamp{};
+    std::array<double, 8> foamCompression{}, foamNormalForce{};
+    RigidContacts rigidContacts{};
 };
 // World must outlive the model. Stepping is explicit; querying never advances time.
 class DrivePhysics
 {
   public:
     DrivePhysics(SimulationWorld &, DrivePhysicsConfig = {});
+    DrivePhysics(SimulationWorld &, DrivePhysicsConfig, const RobotContactConfig &);
     ~DrivePhysics();
     DrivePhysics(const DrivePhysics &) = delete;
     DrivePhysics &operator=(const DrivePhysics &) = delete;
@@ -65,5 +74,17 @@ class DrivePhysics
     std::array<ModulePhysicsState, 4> modules_{};
     std::array<std::array<double, 2>, 4> voltages_{};
     double time_{};
+    std::optional<RobotContactConfig> contactConfig_;
+    std::array<double, 8> foamCompression_{}, foamNormalForce_{};
+    struct FoamShearState
+    {
+        Vec3 point{}, normal{}, displacement{};
+        double stiffness{};
+        uint32_t surface{};
+        size_t capsule{};
+        bool active{};
+    };
+    std::array<FoamShearState, 32> foamShear_{};
+    void CreateRobotBody();
 };
 } // namespace base::sim

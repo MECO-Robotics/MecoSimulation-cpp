@@ -9,11 +9,16 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 #include <algorithm>
@@ -117,15 +122,45 @@ struct SimulationWorld::Impl
     struct Contacts : JPH::ContactListener
     {
         uint32_t manifolds{};
-        void OnContactAdded(const JPH::Body &, const JPH::Body &, const JPH::ContactManifold &,
+        struct Record
+        {
+            JPH::BodyID id;
+            RigidContacts counts;
+        };
+        std::array<Record, 32> records{};
+        size_t count{};
+        void RecordContact(const JPH::Body &body, JPH::SubShapeID sub)
+        {
+            const auto tag = body.GetShape()->GetSubShapeUserData(sub);
+            if (tag != 1 && tag != 2)
+                return;
+            size_t i = 0;
+            while (i < count && records[i].id != body.GetID())
+                ++i;
+            if (i == count)
+            {
+                if (count == records.size())
+                    throw std::runtime_error("Rigid diagnostics capacity exceeded");
+                records[count++] = {body.GetID(), {}};
+            }
+            if (tag == 1)
+                ++records[i].counts.pan;
+            else
+                ++records[i].counts.backing;
+        }
+        void OnContactAdded(const JPH::Body &a, const JPH::Body &b, const JPH::ContactManifold &m,
                             JPH::ContactSettings &) override
         {
             ++manifolds;
+            RecordContact(a, m.mSubShapeID1);
+            RecordContact(b, m.mSubShapeID2);
         }
-        void OnContactPersisted(const JPH::Body &, const JPH::Body &, const JPH::ContactManifold &,
+        void OnContactPersisted(const JPH::Body &a, const JPH::Body &b, const JPH::ContactManifold &m,
                                 JPH::ContactSettings &) override
         {
             ++manifolds;
+            RecordContact(a, m.mSubShapeID1);
+            RecordContact(b, m.mSubShapeID2);
         }
     } contacts;
     Backend mode;
@@ -147,6 +182,14 @@ struct SimulationWorld::Impl
     explicit Impl(Backend m) : mode(m)
     {
         physics.Init(4096, 0, 16384, 4096, layers, broad, pair);
+        // Jolt's metre-scale defaults allow 20mm speculative contacts and
+        // penetration, larger than our 12.7mm ramp lip and 3.175mm pan. Use
+        // millimetre-scale contact settings; swept robot bodies cover motion
+        // between these narrow detection margins at the fixed 4ms timestep.
+        auto settings = physics.GetPhysicsSettings();
+        settings.mSpeculativeContactDistance = .001f;
+        settings.mPenetrationSlop = .0001f;
+        physics.SetPhysicsSettings(settings);
         physics.SetGravity({0, 0, -9.80665f});
         physics.SetContactListener(&contacts);
     }
@@ -210,14 +253,67 @@ BodyHandle SimulationWorld::CreateBody(const BodySpec &s)
     if (s.shape == BodySpec::Shape::Box)
         shape = new JPH::BoxShape(V(s.halfExtents), float(std::min({0.05, s.halfExtents.x * .5, s.halfExtents.y * .5,
                                                                     s.halfExtents.z * .5})));
-    else
+    else if (s.shape == BodySpec::Shape::Sphere)
         shape = new JPH::SphereShape(float(s.radius));
+    else if (s.shape == BodySpec::Shape::Compound)
+    {
+        if (s.parts.empty())
+            throw std::invalid_argument("Empty robot compound");
+        JPH::StaticCompoundShapeSettings compound;
+        for (const auto &p : s.parts)
+        {
+            if (!Finite(p.center) || !Finite(p.halfExtents) || p.halfExtents.x <= 0 || p.halfExtents.y <= 0 ||
+                p.halfExtents.z <= 0)
+                throw std::invalid_argument("Invalid robot compound part");
+            auto *box = new JPH::BoxShape(
+                V(p.halfExtents),
+                float(std::min({.001, p.halfExtents.x * .1, p.halfExtents.y * .1, p.halfExtents.z * .1})));
+            box->SetUserData(p.tag);
+            compound.AddShape(V(p.center), JPH::Quat::sIdentity(), box);
+        }
+        auto result = compound.Create();
+        if (result.HasError())
+            throw std::invalid_argument(result.GetError().c_str());
+        shape = result.Get();
+        // Compound COM is geometry-derived; retain the declared body origin.
+        shape = new JPH::OffsetCenterOfMassShape(shape, -shape->GetCenterOfMass());
+    }
+    else if (s.shape == BodySpec::Shape::BumperRing)
+    {
+        const double t = s.radius;
+        if (t >= std::min(s.halfExtents.x, s.halfExtents.y))
+            throw std::invalid_argument("Bumper wall thickness closes the centre opening");
+        JPH::StaticCompoundShapeSettings ring;
+        auto box = [](Vec3 half) {
+            return new JPH::BoxShape(V(half), float(std::min({kBumperCornerRadius, half.x*.95, half.y*.95, half.z*.95})));
+        };
+        // Front/rear span the full width. Side segments meet them without
+        // overlap, so the shell has no invisible underbody or doubled corners.
+        for (double sign : {-1., 1.})
+        {
+            ring.AddShape(JPH::Vec3(float(sign*(s.halfExtents.x-t/2)), 0, 0), JPH::Quat::sIdentity(),
+                          box({t/2, s.halfExtents.y, s.halfExtents.z}));
+            ring.AddShape(JPH::Vec3(0, float(sign*(s.halfExtents.y-t/2)), 0), JPH::Quat::sIdentity(),
+                          box({s.halfExtents.x-t, t/2, s.halfExtents.z}));
+        }
+        auto result = ring.Create();
+        if (result.HasError())
+            throw std::invalid_argument("Invalid bumper compound: " + std::string(result.GetError().c_str()));
+        shape = result.Get();
+    }
+    else
+        throw std::invalid_argument("Unknown simulation body shape");
     if (s.centerOfMass.x || s.centerOfMass.y || s.centerOfMass.z)
         shape = new JPH::OffsetCenterOfMassShape(shape, V(s.centerOfMass));
     JPH::BodyCreationSettings c(shape, JPH::RVec3(V(s.pose.position)), Q(s.pose.rotation),
                                 s.mass > 0 ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static, s.mass > 0 ? 1 : 0);
     c.mFriction = float(s.friction);
     c.mRestitution = float(s.restitution);
+    // A 4ms drive step can move farther than the plywood thickness. Sweep the
+    // robot's hard shell so it meets the rounded lip before deep face overlap
+    // changes the collision normal and creates an artificial tripping impulse.
+    if (s.mass > 0 && (s.shape == BodySpec::Shape::Compound || s.shape == BodySpec::Shape::BumperRing))
+        c.mMotionQuality = JPH::EMotionQuality::LinearCast;
     c.mLinearDamping = 0;
     c.mAngularDamping = 0;
     if (s.mass > 0)
@@ -279,6 +375,19 @@ void SimulationWorld::SetBodyState(BodyHandle h, const BodyState &s)
     bi.SetPositionAndRotation(e.id, JPH::RVec3(V(s.pose.position)), Q(s.pose.rotation), JPH::EActivation::Activate);
     bi.SetLinearAndAngularVelocity(e.id, V(s.linearVelocity), V(s.angularVelocity));
     SetEnabled(h, s.enabled);
+}
+void SimulationWorld::ClearForces(BodyHandle h)
+{
+    auto &e = impl_->Get(h);
+    for (size_t i = 0; i < impl_->contacts.count; ++i)
+        if (impl_->contacts.records[i].id == e.id)
+            impl_->contacts.records[i].counts = {};
+    if (e.spec.mass > 0)
+    {
+        JPH::BodyLockWrite lock(impl_->physics.GetBodyLockInterface(), e.id);
+        lock.GetBody().ResetForce();
+        lock.GetBody().ResetTorque();
+    }
 }
 void SimulationWorld::SetLinearVelocity(BodyHandle h, Vec3 velocity)
 {
@@ -342,11 +451,107 @@ std::optional<RayHit> SimulationWorld::Raycast(Vec3 o, Vec3 d, std::optional<Bod
     }
     return {};
 }
+RigidContacts SimulationWorld::ContactCounts(BodyHandle h) const
+{
+    auto id = impl_->Get(h).id;
+    for (size_t i = 0; i < impl_->contacts.count; ++i)
+        if (impl_->contacts.records[i].id == id)
+            return impl_->contacts.records[i].counts;
+    return {};
+}
+FoamOverlaps SimulationWorld::QueryFoamCapsule(Pose pose, double halfLength, double radius) const
+{
+    CheckPose(pose);
+    if (!std::isfinite(halfLength) || halfLength <= 0 || !std::isfinite(radius) || radius <= 0)
+        throw std::invalid_argument("Invalid foam capsule");
+    JPH::CapsuleShape capsule{float(halfLength), float(radius)};
+    struct StaticOnly : JPH::ObjectLayerFilter
+    {
+        bool ShouldCollide(JPH::ObjectLayer l) const override { return l == 0; }
+    } filter;
+    struct Collector : JPH::CollideShapeCollector
+    {
+        FoamOverlaps result;
+        const JPH::BodyInterface *bodies{};
+        void AddHit(const JPH::CollideShapeResult &hit) override
+        {
+            if (hit.mPenetrationDepth <= 0)
+                return;
+            const auto n = -hit.mPenetrationAxis.Normalized();
+            FoamOverlap p{V(hit.mContactPointOn2), V(n), hit.mPenetrationDepth,
+                          bodies->GetFriction(hit.mBodyID2), hit.mBodyID2.GetIndexAndSequenceNumber()};
+            for (size_t i = 0; i < result.count; ++i)
+            {
+                const auto &old = result.patches[i];
+                double dx = p.point.x - old.point.x, dy = p.point.y - old.point.y,
+                       dz = p.point.z - old.point.z;
+                double dot =
+                    p.normal.x * old.normal.x + p.normal.y * old.normal.y + p.normal.z * old.normal.z;
+                if (dx * dx + dy * dy + dz * dz < .0001 && dot > .98)
+                {
+                    if (p.depth > old.depth)
+                        result.patches[i] = p;
+                    return;
+                }
+            }
+            if (result.count < 4)
+                result.patches[result.count++] = p;
+            else
+            {
+                auto weakest = std::min_element(result.patches.begin(), result.patches.end(),
+                                                [](auto &a, auto &b) { return a.depth < b.depth; });
+                if (p.depth > weakest->depth)
+                    *weakest = p;
+            }
+        }
+    } collector;
+    collector.bodies = &impl_->physics.GetBodyInterface();
+    impl_->physics.GetNarrowPhaseQuery().CollideShape(
+        &capsule, JPH::Vec3::sReplicate(1),
+        JPH::RMat44::sRotationTranslation(Q(pose.rotation), JPH::RVec3(V(pose.position))),
+        JPH::CollideShapeSettings{}, JPH::RVec3::sZero(), collector, {}, filter);
+    return collector.result;
+}
+std::optional<WheelContact> SimulationWorld::QueryWheelContact(Pose pose, double radius, double width) const
+{
+    CheckPose(pose);
+    if (!std::isfinite(radius) || radius <= 0 || !std::isfinite(width) || width <= 0)
+        throw std::invalid_argument("Invalid wheel contact dimensions");
+    JPH::CylinderShape wheel{float(width / 2), float(radius),
+                             float(std::min({.001, width / 20, radius / 20}))};
+    struct StaticOnly : JPH::ObjectLayerFilter
+    {
+        bool ShouldCollide(JPH::ObjectLayer l) const override { return l == 0; }
+    } filter;
+    struct Collector : JPH::CollideShapeCollector
+    {
+        JPH::Vec3 up;
+        std::optional<WheelContact> result;
+        void AddHit(const JPH::CollideShapeResult &hit) override
+        {
+            const auto normal = -hit.mPenetrationAxis.Normalized();
+            if (normal.Dot(up) <= .25f)
+                return;
+            const double gap = -hit.mPenetrationDepth;
+            if (!result || gap < result->gap)
+                result = WheelContact{V(hit.mContactPointOn2), V(normal), gap};
+        }
+    } collector;
+    collector.up = Q(pose.rotation) * JPH::Vec3::sAxisZ();
+    JPH::CollideShapeSettings settings;
+    settings.mMaxSeparationDistance = .01f;
+    impl_->physics.GetNarrowPhaseQuery().CollideShape(
+        &wheel, JPH::Vec3::sReplicate(1),
+        JPH::RMat44::sRotationTranslation(Q(pose.rotation), JPH::RVec3(V(pose.position))), settings,
+        JPH::RVec3::sZero(), collector, {}, filter);
+    return collector.result;
+}
 void SimulationWorld::Step(double dt)
 {
     if (!std::isfinite(dt) || dt <= 0 || dt > 0.02)
         throw std::invalid_argument("Invalid physics step");
     impl_->contacts.manifolds = 0;
+    impl_->contacts.count = 0;
     if (impl_->physics.Update(float(dt), 1, &impl_->allocator, &impl_->jobs) != JPH::EPhysicsUpdateError::None)
         throw std::runtime_error("Jolt physics capacity exceeded");
 }
