@@ -1,5 +1,6 @@
 #pragma once
 #include "base/sim/SimulationWorld.h"
+#include "base/sim/RobotContactConfig.h"
 #include <array>
 #include <cstddef>
 
@@ -39,12 +40,15 @@ struct DriveTruth
     BodyState body;
     std::array<ModulePhysicsState, 4> modules{};
     double timestamp{};
+    std::array<double, 8> foamCompression{}, foamNormalForce{};
+    RigidContacts rigidContacts{};
 };
 // World must outlive the model. Stepping is explicit; querying never advances time.
 class DrivePhysics
 {
   public:
     DrivePhysics(SimulationWorld &, DrivePhysicsConfig = {});
+    DrivePhysics(SimulationWorld &, DrivePhysicsConfig, const RobotContactConfig &);
     ~DrivePhysics();
     DrivePhysics(const DrivePhysics &) = delete;
     DrivePhysics &operator=(const DrivePhysics &) = delete;
@@ -70,5 +74,17 @@ class DrivePhysics
     std::array<ModulePhysicsState, 4> modules_{};
     std::array<std::array<double, 2>, 4> voltages_{};
     double time_{};
+    std::optional<RobotContactConfig> contactConfig_;
+    std::array<double, 8> foamCompression_{}, foamNormalForce_{};
+    struct FoamShearState
+    {
+        Vec3 point{}, normal{}, displacement{};
+        double stiffness{};
+        uint32_t surface{};
+        size_t capsule{};
+        bool active{};
+    };
+    std::array<FoamShearState, 32> foamShear_{};
+    void CreateRobotBody();
 };
 } // namespace base::sim

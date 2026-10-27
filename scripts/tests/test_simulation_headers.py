@@ -14,9 +14,12 @@ class SimulationHeadersTest(unittest.TestCase):
             owned = (
                 root / "include/base/sim/Arena.h",
                 root / "include/base/sim/DrivePhysics.h",
+                root / "include/base/sim/RobotContactConfig.h",
                 root / "include/base/sim/SimulationWorld.h",
                 root / "adapters/wpilib-2026/include/meco/sim/DriveSimulationAdapter.h",
                 root / "adapters/wpilib-2026/include/meco/sim/BatterySupply.h",
+                root / "adapters/wpilib-2026/include/meco/sim/SimulationPose.h",
+                root / "adapters/wpilib-2026/include/meco/sim/SimulatedVision.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationDiagnostics.h",
                 root / "include/base/sim/fields/Rebuilt2026.h",
             )
@@ -32,9 +35,12 @@ class SimulationHeadersTest(unittest.TestCase):
             self.assertEqual({name for _, name in entries}, {
                 "base/sim/Arena.h",
                 "base/sim/DrivePhysics.h",
+                "base/sim/RobotContactConfig.h",
                 "base/sim/SimulationWorld.h",
                 "meco/sim/DriveSimulationAdapter.h",
                 "meco/sim/BatterySupply.h",
+                "meco/sim/SimulationPose.h",
+                "meco/sim/SimulatedVision.h",
                 "meco/sim/SimulationDiagnostics.h",
                 "base/sim/fields/Rebuilt2026.h",
             })
@@ -43,9 +49,12 @@ class SimulationHeadersTest(unittest.TestCase):
         valid = {
             "base/sim/Arena.h",
             "base/sim/DrivePhysics.h",
+                "base/sim/RobotContactConfig.h",
             "base/sim/SimulationWorld.h",
             "meco/sim/DriveSimulationAdapter.h",
             "meco/sim/BatterySupply.h",
+                "meco/sim/SimulationPose.h",
+                "meco/sim/SimulatedVision.h",
             "meco/sim/SimulationDiagnostics.h",
             "base/sim/fields/Rebuilt2026.h",
         }

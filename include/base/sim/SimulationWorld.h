@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -43,7 +44,13 @@ struct BodySpec
     {
         Box,
         Sphere,
-        BumperRing // Four rectangular perimeter segments, hollow at the centre.
+        BumperRing, // Four rectangular perimeter segments, hollow at the centre.
+        Compound
+    };
+    struct BoxPart
+    {
+        Vec3 center, halfExtents;
+        uint64_t tag{};
     };
     Shape shape{Shape::Box};
     Vec3 halfExtents{0.5, 0.5, 0.5};
@@ -54,6 +61,7 @@ struct BodySpec
     double friction{0.7}, restitution{};
     bool planar{};
     Pose pose{};
+    std::vector<BoxPart> parts; // Compound only; tags 1=pan, 2=backing.
 };
 struct BodyState
 {
@@ -68,6 +76,26 @@ struct RayHit
     BodyHandle body;
     Vec3 position, normal;
     double fraction;
+};
+struct FoamOverlap
+{
+    Vec3 point, normal;
+    double depth{}, friction{};
+    uint32_t surface{}; // Opaque terrain identity for compliant-contact history.
+};
+struct FoamOverlaps
+{
+    std::array<FoamOverlap, 4> patches{};
+    std::size_t count{};
+};
+struct WheelContact
+{
+    Vec3 point, normal;
+    double gap{};
+};
+struct RigidContacts
+{
+    uint32_t pan{}, backing{};
 };
 struct StepTiming
 {
@@ -114,10 +142,16 @@ class SimulationWorld
     void SetBodyState(BodyHandle, const BodyState &);
     // Changes only linear velocity. Static or disabled bodies are left unchanged.
     void SetLinearVelocity(BodyHandle, Vec3);
+    void ClearForces(BodyHandle);
     void SetEnabled(BodyHandle, bool);
     void AddForce(BodyHandle, Vec3 force, Vec3 worldPosition);
     void AddTorque(BodyHandle, Vec3 torque);
     std::optional<RayHit> Raycast(Vec3 origin, Vec3 displacement, std::optional<BodyHandle> exclude = {}) const;
+    // Capsule local axis is Y. Static geometry only; no query-body allocation.
+    FoamOverlaps QueryFoamCapsule(Pose, double halfLength, double radius) const;
+    // Rigid finite-radius tire support, local axle Y; static terrain only.
+    std::optional<WheelContact> QueryWheelContact(Pose, double radius, double width) const;
+    RigidContacts ContactCounts(BodyHandle) const;
     void Step(double seconds);
     void Reset(); // Restore all extant bodies to their creation state.
     Backend Mode() const;

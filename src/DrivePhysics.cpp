@@ -80,6 +80,20 @@ void Validate(const DrivePhysicsConfig &c)
 DrivePhysics::DrivePhysics(SimulationWorld &world, DrivePhysicsConfig config) : world_(world), config_(config)
 {
     Validate(config_);
+    CreateRobotBody();
+}
+DrivePhysics::DrivePhysics(SimulationWorld &world, DrivePhysicsConfig config,
+                           const RobotContactConfig &contact)
+    : world_(world), config_(config), contactConfig_(contact)
+{
+    Validate(config_);
+    ValidateRobotContact(contact, config_.bumperHalfExtents.x, config_.bumperHalfExtents.y);
+    if (world.Mode() != Backend::Full3D)
+        throw std::invalid_argument("Compliant robot contact requires Full3D");
+    CreateRobotBody();
+}
+void DrivePhysics::CreateRobotBody()
+{
     BodySpec spec;
     spec.mass = config_.mass;
     spec.inertia = config_.inertia;
@@ -89,8 +103,26 @@ DrivePhysics::DrivePhysics(SimulationWorld &world, DrivePhysicsConfig config) : 
     // Nominal 3.5-inch bumper depth. Retain an opening for smaller test bodies.
     spec.radius = std::min(.0889, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
     spec.friction = .65;
-    spec.planar = world.Mode() == Backend::Planar;
+    spec.planar = world_.Mode() == Backend::Planar;
     spec.pose.position.z = config_.rideHeight;
+    if (contactConfig_)
+    {
+        const auto &c = *contactConfig_;
+        const double hx = config_.bumperHalfExtents.x, hy = config_.bumperHalfExtents.y;
+        const double innerX = hx - c.noodleDiameter, innerY = hy - c.noodleDiameter, t = c.backingThickness;
+        spec.shape = BodySpec::Shape::Compound;
+        spec.friction = c.friction;
+        spec.parts.push_back({{0, 0, c.chassisClearance + c.panThickness / 2 - config_.rideHeight},
+                              {c.panHalfLength, c.panHalfWidth, c.panThickness / 2},
+                              1});
+        const double z = c.backingFloorGap + c.backingHeight / 2 - config_.rideHeight;
+        for (double sign : {-1., 1.})
+        {
+            spec.parts.push_back({{sign * (innerX - t / 2), 0, z}, {t / 2, innerY, c.backingHeight / 2}, 2});
+            spec.parts.push_back(
+                {{0, sign * (innerY - t / 2), z}, {innerX - t, t / 2, c.backingHeight / 2}, 2});
+        }
+    }
     body_ = world_.CreateBody(spec);
 }
 DrivePhysics::~DrivePhysics()
@@ -119,6 +151,21 @@ void DrivePhysics::BeforePhysics(double dt)
         bool active{};
     };
     std::array<Contact, 4> contacts{};
+    struct FoamContact : Contact
+    {
+        double target{}, softness{}, friction{}, shearStiffness{};
+        Vec3 oldShear{};
+        uint32_t surface{};
+        Vec3 tangentImpulse{};
+        size_t capsule{};
+    };
+    std::array<FoamContact, 32> foam{};
+    size_t foamCount = 0;
+    const auto previousShear = foamShear_;
+    std::array<bool, 32> matchedShear{};
+    foamShear_ = {};
+    foamCompression_ = {};
+    foamNormalForce_ = {};
     const Quaternion inverseRotation{-q.x, -q.y, -q.z, q.w};
     const auto inverseInertia = [&](Vec3 torque) {
         const auto local = Rotate(inverseRotation, torque);
@@ -131,26 +178,110 @@ void DrivePhysics::BeforePhysics(double dt)
         {
             auto &contact = contacts[i];
             const auto mount = Add(body.pose.position, Rotate(q, config_.moduleLocations[i]));
-            // Fixed module-to-ground distance. The 1cm extension is speculative
-            // contact detection, not suspension travel or an elastic element.
-            const double rayLength = config_.rideHeight + .01;
-            const auto hit = world_.Raycast(mount, Scale(down, rayLength), body_);
-            if (!hit || Dot(hit->normal, Scale(down, -1)) <= .25)
+            // Query the entire tire: the front of a 4-inch wheel contacts a lip
+            // before a vertical ray through its axle reaches the obstacle.
+            const double halfAngle = modules_[i].steerAngle / 2;
+            const double sh = std::sin(halfAngle), ch = std::cos(halfAngle);
+            const Quaternion orientation{q.x * ch + q.y * sh, q.y * ch - q.x * sh, q.z * ch + q.w * sh,
+                                         q.w * ch - q.z * sh};
+            const auto center = Add(mount, Rotate(q, {0, 0, config_.wheelRadius - config_.rideHeight}));
+            const auto hit =
+                world_.QueryWheelContact({center, orientation}, config_.wheelRadius, config_.wheelWidth);
+            if (!hit)
                 continue;
             contact.active = true;
-            contact.point = hit->position;
+            contact.point = hit->point;
             contact.normal = hit->normal;
             contact.lever = Add(Add(contact.point, Scale(body.pose.position, -1)),
                                 Scale(Rotate(q, config_.centerOfMass), -1));
-            const auto foot = Add(mount, Scale(down, config_.rideHeight));
-            contact.gap = Dot(Add(foot, Scale(contact.point, -1)), contact.normal);
+            contact.gap = hit->gap;
             const auto angularJacobian = Cross(contact.lever, contact.normal);
             contact.inverseMass = 1 / config_.mass +
                 Dot(angularJacobian, inverseInertia(angularJacobian));
         }
+        if (contactConfig_)
+        {
+            const auto &c = *contactConfig_;
+            const double radius = c.noodleDiameter / 2;
+            size_t capsule = 0;
+            for (int side = 0; side < 4; ++side)
+                for (int level = 0; level < 2; ++level, ++capsule)
+                {
+                    const bool alongY = side < 2;
+                    const double sign = side % 2 ? 1. : -1.;
+                    const double hx = config_.bumperHalfExtents.x, hy = config_.bumperHalfExtents.y;
+                    const double halfLength = alongY ? hy - radius : hx - 3 * radius;
+                    Vec3 center{alongY ? sign * (hx - radius) : 0, alongY ? 0 : sign * (hy - radius),
+                                c.bumperFloorGap + radius + level * c.noodleDiameter - config_.rideHeight};
+                    // Rotate local Y onto X for the side noodles.
+                    Quaternion orientation = q;
+                    if (!alongY)
+                    {
+                        constexpr double h = .7071067811865475244;
+                        // q * rotationZ(pi/2)
+                        orientation = {h * (q.x + q.y), h * (q.y - q.x), h * (q.z + q.w), h * (q.w - q.z)};
+                    }
+                    auto patches = world_.QueryFoamCapsule(
+                        {Add(body.pose.position, Rotate(q, center)), orientation}, halfLength, radius);
+                    for (size_t j = 0; j < patches.count; ++j)
+                    {
+                        const auto &p = patches.patches[j];
+                        auto &f = foam[foamCount++];
+                        f.point = p.point;
+                        f.normal = p.normal;
+                        f.capsule = capsule;
+                        f.active = true;
+                        f.friction = std::sqrt(c.friction * p.friction);
+                        f.lever = Add(Add(p.point, Scale(body.pose.position, -1)),
+                                      Scale(Rotate(q, config_.centerOfMass), -1));
+                        const auto jacobian = Cross(f.lever, f.normal);
+                        f.inverseMass = 1 / config_.mass + Dot(jacobian, inverseInertia(jacobian));
+                        const auto response = EvaluateFoam(c, p.depth / c.noodleDiameter);
+                        // Fixed projected area per noodle, shared by its current patches.
+                        const double area = 2 * (halfLength + radius) * c.noodleDiameter / patches.count;
+                        const double stiffness = area * response.tangent / c.noodleDiameter;
+                        // Estimated low-Poisson foam approximation: G=E/2.
+                        // Normal compression is damped; tangential shear is
+                        // elastic with Coulomb plastic return at slip.
+                        f.shearStiffness = stiffness / 2;
+                        f.surface = p.surface;
+                        size_t best = previousShear.size();
+                        double bestDistance = .05 * .05;
+                        for (size_t k = 0; k < previousShear.size(); ++k)
+                        {
+                            const auto &old = previousShear[k];
+                            if (matchedShear[k] || !old.active || old.capsule != capsule ||
+                                old.surface != p.surface || Dot(old.normal, p.normal) < .95)
+                                continue;
+                            const auto delta = Add(old.point, Scale(p.point, -1));
+                            const double distance = Dot(delta, delta);
+                            if (distance < bestDistance)
+                            {
+                                best = k;
+                                bestDistance = distance;
+                            }
+                        }
+                        if (best < previousShear.size())
+                        {
+                            matchedShear[best] = true;
+                            auto stored = previousShear[best].displacement;
+                            stored = Add(stored, Scale(p.normal, -Dot(stored, p.normal)));
+                            // Changing contact area/stiffness must not manufacture
+                            // shear energy or a larger remembered force.
+                            f.oldShear =
+                                Scale(stored, std::min(1., previousShear[best].stiffness / f.shearStiffness));
+                        }
+                        const double damping = 2 * c.dampingRatio * std::sqrt(stiffness / f.inverseMass);
+                        const double denominator = damping + dt * stiffness;
+                        f.softness = 1 / (dt * denominator);
+                        f.target = area * response.pressure / denominator;
+                        foamCompression_[capsule] = std::max(foamCompression_[capsule], p.depth);
+                    }
+                }
+        }
         // Projected Gauss-Seidel solve of unilateral rigid normal constraints.
         // Predict gravity once, then share reaction impulses across all wheels.
-        // There is no spring, damping coefficient, preload or stored elastic energy.
+        // Wheel support has no suspension or elastic energy; only foam is compliant.
         auto linear = Add(body.linearVelocity, {0, 0, -9.80665 * dt});
         auto angular = body.angularVelocity;
         for (int iteration = 0; iteration < 24; ++iteration)
@@ -171,6 +302,53 @@ void DrivePhysics::BeforePhysics(double dt)
                 linear = Add(linear, Scale(contact.normal, delta / config_.mass));
                 angular = Add(angular, inverseInertia(Scale(Cross(contact.lever, contact.normal), delta)));
             }
+            for (size_t i = 0; i < foamCount; ++i)
+            {
+                auto &f = foam[i];
+                const double velocity = Dot(Add(linear, Cross(angular, f.lever)), f.normal);
+                const double next = std::max(0., f.impulse + (f.target - velocity - f.softness * f.impulse) /
+                                                                 (f.inverseMass + f.softness));
+                const double delta = next - f.impulse;
+                f.impulse = next;
+                linear = Add(linear, Scale(f.normal, delta / config_.mass));
+                angular = Add(angular, inverseInertia(Scale(Cross(f.lever, f.normal), delta)));
+                const auto v = Add(linear, Cross(angular, f.lever));
+                const auto seed = std::abs(f.normal.z) < .9 ? Vec3{0, 0, 1} : Vec3{1, 0, 0};
+                const auto t1 = Unit(Cross(f.normal, seed)), t2 = Cross(f.normal, t1);
+                const auto j1 = Cross(f.lever, t1), j2 = Cross(f.lever, t2);
+                const double shearSoftness = 1 / (dt * dt * f.shearStiffness);
+                const double a = 1 / config_.mass + Dot(j1, inverseInertia(j1)) + shearSoftness;
+                const double b = Dot(j1, inverseInertia(j2));
+                const double d = 1 / config_.mass + Dot(j2, inverseInertia(j2)) + shearSoftness;
+                const auto residual =
+                    Add(Add(v, Scale(f.oldShear, 1 / dt)), Scale(f.tangentImpulse, shearSoftness));
+                const double r1 = -Dot(residual, t1), r2 = -Dot(residual, t2), det = a * d - b * b;
+                auto candidate = Add(f.tangentImpulse, Add(Scale(t1, (d * r1 - b * r2) / det),
+                                                           Scale(t2, (a * r2 - b * r1) / det)));
+                const double length = std::sqrt(Dot(candidate, candidate));
+                const double limit = f.friction * f.impulse;
+                if (length > limit)
+                    candidate = Scale(candidate, limit / length);
+                const auto change = Add(candidate, Scale(f.tangentImpulse, -1));
+                f.tangentImpulse = candidate;
+                linear = Add(linear, Scale(change, 1 / config_.mass));
+                angular = Add(angular, inverseInertia(Cross(f.lever, change)));
+            }
+        }
+        for (size_t i = 0; i < foamCount; ++i)
+        {
+            const auto &f = foam[i];
+            world_.AddForce(body_, Scale(Add(Scale(f.normal, f.impulse), f.tangentImpulse), 1 / dt), f.point);
+            foamNormalForce_[f.capsule] += f.impulse / dt;
+            // Plastic return maps displacement to the force that was actually
+            // admitted by the friction cone. A separated contact is forgotten.
+            foamShear_[i] = {f.point,
+                             f.normal,
+                             Scale(f.tangentImpulse, -1 / (dt * f.shearStiffness)),
+                             f.shearStiffness,
+                             f.surface,
+                             f.capsule,
+                             true};
         }
         for (const auto &contact : contacts)
             if (contact.active)
@@ -288,6 +466,14 @@ void DrivePhysics::BeforePhysics(double dt)
         m.longitudinalSlip=c.wheelRadius*m.wheelVelocity-forward;
         m.normalForce=normalForce; m.longitudinalForce=tire[0]; m.lateralForce=tire[1];
         world_.AddForce(body_,Add(Scale(longitudinal,tire[0]),Scale(lateral,tire[1])),contact);
+        if (world_.Mode() == Backend::Full3D)
+        {
+            // Applying tire force at the ground contact already includes the
+            // steady rolling drive reaction. The missing term is the change
+            // in wheel spin momentum, including airborne motor acceleration.
+            const auto axle = Rotate(q, {-std::sin(angle), std::cos(angle), 0});
+            world_.AddTorque(body_, Scale(axle, -c.wheelInertia * (m.wheelVelocity - previousWheel) / dt));
+        }
         // Equal/opposite actuator/coupling reaction on the chassis. Ground
         // torsion loads the module; do not apply it a second time to the body.
         world_.AddTorque(body_,Add(Scale(normal,m.azimuthGroundTorque),
@@ -303,6 +489,10 @@ void DrivePhysics::Reset(Pose pose)
     BodyState state;
     state.pose = pose;
     world_.SetBodyState(body_, state);
+    world_.ClearForces(body_);
+    foamShear_ = {};
+    foamCompression_ = {};
+    foamNormalForce_ = {};
     modules_ = {};
     voltages_ = {};
     time_ = 0;
@@ -331,6 +521,7 @@ double DrivePhysics::SupplyCurrent(double busVoltage) const
 }
 DriveTruth DrivePhysics::Truth() const
 {
-    return {world_.ReadBody(body_), modules_, time_};
+    return {world_.ReadBody(body_), modules_,         time_,
+            foamCompression_,       foamNormalForce_, world_.ContactCounts(body_)};
 }
 } // namespace base::sim

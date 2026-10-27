@@ -9,9 +9,12 @@ from typing import Iterable
 REQUIRED_SIMULATION_HEADERS = {
     "base/sim/Arena.h",
     "base/sim/DrivePhysics.h",
+    "base/sim/RobotContactConfig.h",
     "base/sim/SimulationWorld.h",
     "meco/sim/DriveSimulationAdapter.h",
     "meco/sim/BatterySupply.h",
+    "meco/sim/SimulationPose.h",
+    "meco/sim/SimulatedVision.h",
     "meco/sim/SimulationDiagnostics.h",
     "base/sim/fields/Rebuilt2026.h",
 }

@@ -56,7 +56,7 @@ year branch and package.
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
 MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
-shared battery helper and reusable 2026 field geometry. Applications own hardware
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and reusable 2026 field geometry. Applications own hardware
 parameters, commands, robot-specific game-piece behavior, starting-pose policy and
 telemetry presentation. Applications must not copy `base/sim` headers or replace
 Simulation archive objects.
@@ -121,10 +121,10 @@ The portable `DrivePhysicsConfig` additionally exposes motor resistance, torque
 constant, velocity constant, and friction voltage. Invalid/nonfinite physical
 parameters throw during construction.
 
-Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four downward wheel
+Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four finite-cylinder wheel
 contact queries at fixed, hard-mounted module positions. A projected unilateral
 normal-impulse solve supports the body against gravity without springs, suspension
-travel or static sag. The 1 cm ray extension and 0.1 mm penetration slop are
+travel or static sag. The 1 cm query margin and 0.1 mm penetration slop are
 numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
 forces are capped by the solved normal reactions. Motor current and wheel inertia
 affect acceleration; forces act at contact points. The bumper is one rigid body with four compound box segments forming a hollow
@@ -132,12 +132,12 @@ perimeter (nominal 3.5-inch depth, reduced for very small test bodies). Its cent
 and half-height come from body ride height and bumper half extents; configure
 these together with the relative CoM to preserve the intended world CoM height.
 The shell contacts ground, slopes and obstacles through Jolt, independently of
-wheel-support rays. The centre opening does not create an invisible belly plate.
+wheel-support queries. The centre opening does not create an invisible belly plate.
 Bumper friction is 0.65 with zero restitution; Jolt combines material friction.
 This is rigid contact, not measured foam compression or impact-energy absorption.
 `BodySpec::Shape::BumperRing` uses `radius` as wall thickness and preserves the
 existing structure layout; invalid thickness which closes the centre is rejected.
-Contact rays do not model finite tire volume, sidewalls or detailed wheel geometry;
+Cylinder queries model finite tire volume, but not tire deformation, individual spikes or sidewalls;
 inertia is supplied along body principal axes. This is an approximate rigid-contact
 tire model, not a measured tire model or an articulated robot model.
 
@@ -250,3 +250,16 @@ establish hardware calibration, CAN timing, or physical safety.
 2026.0.10 lowers the estimated bumper–HDPE contact friction and rounds padded
 bumper edges while preserving the field dimensions, tire model and floor gap.
 See [bump contact validation](docs/bump-contact.md).
+
+## Configurable robot contact
+
+Version `2026.0.11` adds independent belly-pan clearance, rigid
+plywood backing and implicit pool-noodle compression. See
+[construction, material assumptions, telemetry and checks](docs/compliant-bumper-contact.md).
+The legacy adapter overload retains its rigid-contact behavior.
+
+`meco/sim/SimulationPose.h` provides `FloorReferencedRobotPose` with a body-local
+height offset. `meco/sim/SimulatedVision.h` provides `VisibleTags` with camera
+mount, field layout, full horizontal/vertical angles and maximum range supplied
+by the caller. These ideal geometric helpers do not model occlusion or noise;
+sensor settings and alignment policy remain application-owned.

@@ -103,6 +103,8 @@ model {
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/BatterySupply.h>
+#include <meco/sim/SimulationPose.h>
+#include <meco/sim/SimulatedVision.h>
 #include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
@@ -126,6 +128,15 @@ class Gyro final : public base::SwerveGyroIO {
 };
 
 int main() {
+  using namespace units::literals;
+  const auto floor = meco::sim::FloorReferencedRobotPose(
+      frc::Pose3d{0_m, 0_m, .2_m, frc::Rotation3d{}}, .2_m);
+  if (std::abs(floor.Z().value()) > 1e-12) return 30;
+  const frc::AprilTagFieldLayout tags{
+      std::vector<frc::AprilTag>{{1, frc::Pose3d{2_m, 0_m, 0_m,
+          frc::Rotation3d{0_deg, 0_deg, 180_deg}}}}, 10_m, 8_m};
+  if (meco::sim::VisibleTags(floor, frc::Transform3d{}, tags,
+                           60_deg, 50_deg, 3_m) != std::vector<int>{1}) return 31;
   if (!HAL_Initialize(500, 0)) return 2;
   int result = 1;
   {

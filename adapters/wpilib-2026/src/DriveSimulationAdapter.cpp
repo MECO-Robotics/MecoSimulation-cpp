@@ -4,6 +4,7 @@
 #include "meco/sim/SimulationDiagnostics.h"
 
 #include <frc/system/plant/DCMotor.h>
+#include <frc/smartdashboard/SmartDashboard.h>
 
 #include <algorithm>
 #include <cmath>
@@ -58,11 +59,37 @@ base::sim::DrivePhysicsConfig MakePhysicsConfig(const base::DriveConfig &config)
 
 struct DriveSimulationSession::Impl
 {
-    Impl(const base::DriveConfig &config, base::sim::Backend backend)
-        : world_(backend), physics_(world_, MakePhysicsConfig(config)), config_(config)
+    Impl(const base::DriveConfig &config, base::sim::Backend backend,
+         const RobotContactConfig *contact = nullptr)
+        : world_(backend),
+          physics_(
+              contact ? std::make_unique<base::sim::DrivePhysics>(world_, MakePhysicsConfig(config), *contact)
+                      : std::make_unique<base::sim::DrivePhysics>(world_, MakePhysicsConfig(config))),
+          config_(config)
     {
         if (backend == base::sim::Backend::Phoenix)
             throw std::invalid_argument("Jolt drive simulation requires jolt-planar or jolt-3d backend");
+        if (contact)
+        {
+            const auto &c = *contact;
+            frc::SmartDashboard::PutNumber("FieldSimulation/ChassisClearance", c.chassisClearance);
+            frc::SmartDashboard::PutNumber("FieldSimulation/PanThickness", c.panThickness);
+            frc::SmartDashboard::PutNumber("FieldSimulation/PanHalfLength", c.panHalfLength);
+            frc::SmartDashboard::PutNumber("FieldSimulation/PanHalfWidth", c.panHalfWidth);
+            frc::SmartDashboard::PutNumber("FieldSimulation/BackingFloorGap", c.backingFloorGap);
+            frc::SmartDashboard::PutNumber("FieldSimulation/BackingThickness", c.backingThickness);
+            frc::SmartDashboard::PutNumber("FieldSimulation/BackingHeight", c.backingHeight);
+            frc::SmartDashboard::PutNumber("FieldSimulation/BumperFloorGap", c.bumperFloorGap);
+            frc::SmartDashboard::PutNumber("FieldSimulation/NoodleDiameter", c.noodleDiameter);
+            frc::SmartDashboard::PutNumber("FieldSimulation/FoamDampingRatio", c.dampingRatio);
+            frc::SmartDashboard::PutBoolean("FieldSimulation/CompliantBumpers", true);
+            frc::SmartDashboard::PutNumberArray("FieldSimulation/FoamCompressionStrain",c.compressionStrain);
+            frc::SmartDashboard::PutNumberArray("FieldSimulation/FoamCompressionStressPa",c.compressionStressPa);
+            frc::SmartDashboard::PutNumber("FieldSimulation/BumperMaterialFriction",c.friction);
+            frc::SmartDashboard::PutNumber("FieldSimulation/WheelRadius",config.wheelRadius);
+            frc::SmartDashboard::PutNumber("FieldSimulation/WheelWidth",physics_->Config().wheelWidth);
+            frc::SmartDashboard::PutNumber("FieldSimulation/TireFrictionEstimate",config.cof);
+        }
         // The standalone drive world still needs a ground surface. Without it,
         // Full3D gravity pulls the chassis through empty space and the wheel
         // suspension rays never produce useful normal force.
@@ -81,44 +108,48 @@ struct DriveSimulationSession::Impl
         drive_ = &drive;
         WriteSensors();
         registration_ = base::simulation::GetSimulationRuntime().Register(
-            {[this](double dt) {
+            {[this](double dt)
+             {
                  ReadVoltages(dt);
-                 physics_.BeforePhysics(dt);
+                 physics_->BeforePhysics(dt);
                  if (arena_)
                      arena_->BeforePhysics(dt);
              },
              [this](double dt) { world_.Step(dt); },
-             [this](double dt) {
-                 physics_.AfterPhysics(dt);
+             [this](double dt)
+             {
+                 physics_->AfterPhysics(dt);
                  if (arena_)
                      arena_->AfterPhysics(dt);
                  WriteSensors();
              },
-             [this] {
+             [this]
+             {
                  Reset(frc::Pose2d{});
                  if (drive_)
                      drive_->ResetPose(frc::Pose2d{});
              },
-             [this] { return physics_.SupplyCurrent(base::simulation::GetSimulationRuntime().BusVoltage()); }});
+             [this]
+             { return physics_->SupplyCurrent(base::simulation::GetSimulationRuntime().BusVoltage()); }});
     }
 
     void Reset(const frc::Pose2d &pose)
     {
         const double angle = pose.Rotation().Radians().value();
         lastYaw_ = unwrappedYaw_ = angle;
-        physics_.Reset({{pose.X().value(), pose.Y().value(), config_.simulation.rideHeight},
-                        {0, 0, std::sin(angle / 2), std::cos(angle / 2)}});
+        physics_->Reset({{pose.X().value(), pose.Y().value(), config_.simulation.rideHeight},
+                         {0, 0, std::sin(angle / 2), std::cos(angle / 2)}});
         if (arena_)
             arena_->Reset();
         if (drive_)
             WriteSensors();
     }
 
-    base::sim::DriveTruth PhysicsTruth() const { return physics_.Truth(); }
+    base::sim::DriveTruth PhysicsTruth() const { return physics_->Truth(); }
 
     base::DriveSimulationTruth Truth() const
     {
-        const auto truth = physics_.Truth();
+        const auto truth = physics_->Truth();
         const auto &body = truth.body;
         const auto &q = body.pose.rotation;
         const double yaw = std::atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
@@ -131,8 +162,8 @@ struct DriveSimulationSession::Impl
     {
         if (arena_)
             throw std::logic_error("Simulation session already owns an arena");
-        arena_ = std::make_unique<base::sim::Arena>(world_, [this] { return physics_.Truth().body; }, scene, seed,
-                                                    robotCenterOfMass);
+        arena_ = std::make_unique<base::sim::Arena>(
+            world_, [this] { return physics_->Truth().body; }, scene, seed, robotCenterOfMass);
         return *arena_;
     }
 
@@ -141,12 +172,12 @@ struct DriveSimulationSession::Impl
     {
         const auto volts = drive_->SimulationVoltages(dt, base::simulation::GetSimulationRuntime().BusVoltage());
         for (std::size_t i = 0; i < volts.size(); ++i)
-            physics_.SetModuleVoltages(i, volts[i][0], volts[i][1]);
+            physics_->SetModuleVoltages(i, volts[i][0], volts[i][1]);
     }
 
     void WriteSensors()
     {
-        const auto truth = physics_.Truth();
+        const auto truth = physics_->Truth();
         base::DriveSimulationFeedback feedback;
         for (std::size_t i = 0; i < truth.modules.size(); ++i)
         {
@@ -163,12 +194,11 @@ struct DriveSimulationSession::Impl
             out.steerAngle = module.steerAngle;
             out.steerVelocity = module.steerVelocity;
         }
-        if (meco::sim::LatencyProbeEnabled())
         {
-            static int64_t last=0;
             const auto now=nt::Now();
-            if(now-last>=20000) {
-                last=now;
+            if (now - lastContactPublish_ >= 20000)
+            {
+                lastContactPublish_ = now;
                 std::array<double,25> values{};
                 values[0]=now;
                 for(size_t i=0;i<truth.modules.size();++i) {
@@ -180,6 +210,15 @@ struct DriveSimulationSession::Impl
                 static auto publisher=nt::NetworkTableInstance::GetDefault()
                     .GetDoubleArrayTopic("/Diagnostics/Drive/AzimuthLoad").Publish();
                 publisher.Set(values);
+                std::array<double, 4> loads{};
+                for (size_t i = 0; i < 4; ++i)
+                    loads[i] = truth.modules[i].normalForce;
+                wheelLoads_.Set(loads);
+                foamCompression_.Set(truth.foamCompression);
+                foamForces_.Set(truth.foamNormalForce);
+                const std::array<double, 2> rigid{double(truth.rigidContacts.pan),
+                                                  double(truth.rigidContacts.backing)};
+                rigidContacts_.Set(rigid);
             }
         }
         const auto &q = truth.body.pose.rotation;
@@ -198,10 +237,25 @@ struct DriveSimulationSession::Impl
     }
 
     base::sim::SimulationWorld world_;
-    base::sim::DrivePhysics physics_;
+    std::unique_ptr<base::sim::DrivePhysics> physics_;
     base::DriveConfig config_;
     base::sim::BodyHandle floor_{};
     base::Drive *drive_{};
+    nt::DoubleArrayPublisher wheelLoads_ = nt::NetworkTableInstance::GetDefault()
+                                               .GetDoubleArrayTopic("/Simulation/Contact/WheelNormalLoadsN")
+                                               .Publish();
+    nt::DoubleArrayPublisher foamCompression_ =
+        nt::NetworkTableInstance::GetDefault()
+            .GetDoubleArrayTopic("/Simulation/Contact/FoamCompressionM")
+            .Publish();
+    nt::DoubleArrayPublisher foamForces_ = nt::NetworkTableInstance::GetDefault()
+                                               .GetDoubleArrayTopic("/Simulation/Contact/FoamNormalForcesN")
+                                               .Publish();
+    nt::DoubleArrayPublisher rigidContacts_ =
+        nt::NetworkTableInstance::GetDefault()
+            .GetDoubleArrayTopic("/Simulation/Contact/RigidContactsPanBacking")
+            .Publish();
+    int64_t lastContactPublish_{};
     double lastYaw_{}, unwrappedYaw_{};
     std::unique_ptr<base::sim::Arena> arena_;
     base::simulation::Registration registration_;
@@ -209,6 +263,11 @@ struct DriveSimulationSession::Impl
 
 DriveSimulationSession::DriveSimulationSession(const base::DriveConfig &config, base::sim::Backend backend)
     : impl_(std::make_unique<Impl>(config, backend))
+{
+}
+DriveSimulationSession::DriveSimulationSession(const base::DriveConfig &config, base::sim::Backend backend,
+                                               const RobotContactConfig &contact)
+    : impl_(std::make_unique<Impl>(config, backend, &contact))
 {
 }
 DriveSimulationSession::~DriveSimulationSession() = default;
@@ -226,5 +285,11 @@ std::unique_ptr<DriveSimulationSession> CreateDriveSimulationAdapter(const base:
                                                                      base::sim::Backend backend)
 {
     return std::make_unique<DriveSimulationSession>(config, backend);
+}
+std::unique_ptr<DriveSimulationSession> CreateDriveSimulationAdapter(const base::DriveConfig &config,
+                                                                     base::sim::Backend backend,
+                                                                     const RobotContactConfig &contact)
+{
+    return std::make_unique<DriveSimulationSession>(config, backend, contact);
 }
 } // namespace meco::sim

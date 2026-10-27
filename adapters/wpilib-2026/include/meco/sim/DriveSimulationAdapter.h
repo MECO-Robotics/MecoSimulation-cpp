@@ -8,10 +8,12 @@
 
 namespace meco::sim
 {
+using RobotContactConfig = base::sim::RobotContactConfig;
 class DriveSimulationSession final : public base::DriveSimulationAdapter
 {
   public:
     DriveSimulationSession(const base::DriveConfig &, base::sim::Backend);
+    DriveSimulationSession(const base::DriveConfig &, base::sim::Backend, const RobotContactConfig &);
     ~DriveSimulationSession() override;
     DriveSimulationSession(const DriveSimulationSession &) = delete;
     DriveSimulationSession &operator=(const DriveSimulationSession &) = delete;
@@ -33,4 +35,6 @@ class DriveSimulationSession final : public base::DriveSimulationAdapter
 // after WPILib has selected the desktop simulation backend.
 std::unique_ptr<DriveSimulationSession> CreateDriveSimulationAdapter(
     const base::DriveConfig &, base::sim::Backend backend = base::sim::BackendFromEnvironment());
+std::unique_ptr<DriveSimulationSession>
+CreateDriveSimulationAdapter(const base::DriveConfig &, base::sim::Backend, const RobotContactConfig &);
 } // namespace meco::sim
