@@ -87,9 +87,10 @@ inline TuningResult DeriveSimulationTuning(const TuningInputs& in)
     // For proportional pose feedback, v=Kp*error. At the chosen error scale,
     // v^2/(2*a) equals that error, so the command remains inside the available
     // acceleration stopping envelope.
-    return {std::sqrt(2.0 * maxLinearAcceleration / in.translationErrorScaleMeters),
-            std::sqrt(2.0 * maxAngularAcceleration / in.headingErrorScaleRadians),
-            maxLinearAcceleration,
-            maxAngularAcceleration};
+    const double translationKP = std::sqrt(2.0 * maxLinearAcceleration / in.translationErrorScaleMeters);
+    const double rotationKP = std::sqrt(2.0 * maxAngularAcceleration / in.headingErrorScaleRadians);
+    if (!std::isfinite(translationKP) || !std::isfinite(rotationKP))
+        throw std::invalid_argument("Simulation tuning gains must be finite");
+    return {translationKP, rotationKP, maxLinearAcceleration, maxAngularAcceleration};
 }
 } // namespace base::sim
