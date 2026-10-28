@@ -52,6 +52,18 @@ Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
 The `github-pages` environment is the deployment gate. 2027 uses a separate
 year branch and package.
 
+To check Simulation 2026.0.13 with Base 2026.2.4 after both are published,
+run the following from a Simulation `v2026.0.13` checkout, with `BASE_ROOT`
+pointing to a checkout of the `v2026.2.4` Base tag. Repeat for Debug and
+Release on Linux and Windows; Windows requires the verified Studica cache in
+`FRC_VENDOR_CACHE`, as configured by the release workflow. Use `python` in
+place of `python3` if that is the Python command on Windows.
+
+```sh
+python3 scripts/consumer_smoke.py --target desktop --configuration Release \
+  --published --meco-base-root "$BASE_ROOT" --expected-base-version 2026.2.4
+```
+
 ## Package ownership
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.

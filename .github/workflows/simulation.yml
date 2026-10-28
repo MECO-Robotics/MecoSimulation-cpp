@@ -402,5 +402,16 @@ jobs:
           python-version: '3.12'
       - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
         if: runner.os == 'Windows'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: runner.os == 'Windows'
+        with:
+          name: base-windows-vendor-cache
+          path: MecoBase-cpp/build/vendor-cache/
+      - name: Verify and configure pinned Studica cache
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          python MecoBase-cpp/scripts/prepare_vendor_cache.py --output MecoBase-cpp/build/vendor-cache --verify-only
+          echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
       - name: Link consumer against deployed vendordeps
         run: python scripts/consumer_smoke.py --target desktop --configuration ${{ matrix.configuration }} --published --meco-base-root MecoBase-cpp
