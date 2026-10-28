@@ -48,6 +48,10 @@ must contain the 2026.2.1 split package. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
+Set both `paired_base_ref` and `paired_base_version` when dispatching a release
+to additionally check that published Base version with the new Simulation
+package on Linux and Windows in Debug and Release. The minimum Base checks
+still run independently.
 Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
 The `github-pages` environment is the deployment gate. 2027 uses a separate
 year branch and package.

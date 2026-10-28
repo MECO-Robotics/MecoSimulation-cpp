@@ -44,6 +44,14 @@ on:
         type: boolean
         required: true
         default: false
+      paired_base_ref:
+        description: Optional published Base ref for a second deployed consumer check
+        type: string
+        required: false
+      paired_base_version:
+        description: Version of the optional published Base ref
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -54,6 +62,15 @@ jobs:
     outputs:
       commit: ${{ steps.pin.outputs.commit }}
     steps:
+      - name: Validate paired Base inputs
+        env:
+          PAIRED_BASE_REF: ${{ inputs.paired_base_ref }}
+          PAIRED_BASE_VERSION: ${{ inputs.paired_base_version }}
+        run: |
+          if [[ -n "$PAIRED_BASE_REF" && -z "$PAIRED_BASE_VERSION" ]] || [[ -z "$PAIRED_BASE_REF" && -n "$PAIRED_BASE_VERSION" ]]; then
+            echo "Both paired Base inputs must be supplied together" >&2
+            exit 1
+          fi
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: MECO-Robotics/MecoBase-cpp
@@ -415,3 +432,45 @@ jobs:
           echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
       - name: Link consumer against deployed vendordeps
         run: python scripts/consumer_smoke.py --target desktop --configuration ${{ matrix.configuration }} --published --meco-base-root MecoBase-cpp
+
+  paired-deployed-consumer-smoke:
+    if: startsWith(github.ref, 'refs/tags/v2026.') && inputs.publish && inputs.paired_base_ref != '' && inputs.paired_base_version != ''
+    needs: [publish-pages, verify-deployment, base-vendor-cache]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+        configuration: [Debug, Release]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: MECO-Robotics/MecoBase-cpp
+          ref: ${{ inputs.paired_base_ref }}
+          path: MecoBase-cpp
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
+        if: runner.os == 'Windows'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: runner.os == 'Windows'
+        with:
+          name: base-windows-vendor-cache
+          path: MecoBase-cpp/build/vendor-cache/
+      - name: Verify and configure pinned Studica cache
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          python MecoBase-cpp/scripts/prepare_vendor_cache.py --output MecoBase-cpp/build/vendor-cache --verify-only
+          echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
+      - name: Link consumer against paired deployed vendordeps
+        env:
+          PAIRED_BASE_VERSION: ${{ inputs.paired_base_version }}
+        run: python scripts/consumer_smoke.py --target desktop --configuration ${{ matrix.configuration }} --published --meco-base-root MecoBase-cpp --expected-base-version "$PAIRED_BASE_VERSION"
+        shell: bash
