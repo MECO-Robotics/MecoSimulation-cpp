@@ -48,18 +48,48 @@ must contain the 2026.2.1 split package. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
+Set both `paired_base_ref` and `paired_base_version` when dispatching a release
+to additionally check that published Base version with the new Simulation
+package on Linux and Windows in Debug and Release. The minimum Base checks
+still run independently.
 Publishing requires a `v2026.*` tag and the explicit `publish` workflow input.
 The `github-pages` environment is the deployment gate. 2027 uses a separate
 year branch and package.
+
+To check Simulation 2026.0.13 with Base 2026.2.4 after both are published,
+run the following from a Simulation `v2026.0.13` checkout, with `BASE_ROOT`
+pointing to a checkout of the `v2026.2.4` Base tag. Repeat for Debug and
+Release on Linux and Windows; Windows requires the verified Studica cache in
+`FRC_VENDOR_CACHE`, as configured by the release workflow. Use `python` in
+place of `python3` if that is the Python command on Windows.
+
+```sh
+python3 scripts/consumer_smoke.py --target desktop --configuration Release \
+  --published --meco-base-root "$BASE_ROOT" --expected-base-version 2026.2.4
+```
 
 ## Package ownership
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
 MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
-shared battery helper, pose-reference transforms, ideal AprilTag visibility and reusable 2026 field geometry. Applications own hardware
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, drivetrain tuning estimates and reusable 2026 field geometry. Applications own hardware
 parameters, commands, robot-specific game-piece behavior, starting-pose policy and
 telemetry presentation. Applications must not copy `base/sim` headers or replace
 Simulation archive objects.
+
+`base/sim/SimulationTuning.h` estimates initial proportional drive gains from
+a current and traction limited stopping envelope. The application supplies the
+translation and heading error scales, along with its physical parameters. This
+estimate is an acceleration upper bound, not a contact or steering-load model.
+`base/sim/FootprintClearance.h` checks a rectangular footprint against field
+bounds and pitch-only box colliders using conservative projected bounds. The
+application supplies robot dimensions, height and collider margin. The margin
+applies to colliders; the footprint must stay strictly inside the field bounds.
+Invalid or unsupported collider geometry is rejected.
+Ideal vision observations reject invalid timestamps, height bounds and standard
+deviations. Particle contacts are a discrete, equal-mass approximation with a
+prescribed robot body; they do not provide swept collision detection or reaction
+forces on that body.
 
 2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
 support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
@@ -252,6 +282,10 @@ bumper edges while preserving the field dimensions, tire model and floor gap.
 See [bump contact validation](docs/bump-contact.md).
 
 ## Configurable robot contact
+
+Version `2026.0.13` adds reusable drivetrain tuning, footprint clearance,
+ideal vision observations, and particle contact helpers. Applications supply
+their own robot geometry, sensor configuration, and game-specific rules.
 
 Version `2026.0.12` removes a diagnostic-only bump scenario while retaining the rigid-contact and low-clearance traversal regressions. Runtime behavior is unchanged from 2026.0.11.
 

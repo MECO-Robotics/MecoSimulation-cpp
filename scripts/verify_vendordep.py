@@ -11,7 +11,7 @@ import zipfile
 
 from simulation_headers import validate_simulation_header_names
 
-VERSION = "2026.0.12"
+VERSION = "2026.0.13"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
 CLASSIFIERS = ("linuxx86-64", "windowsx86-64")
 
