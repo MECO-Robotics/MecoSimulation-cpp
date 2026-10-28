@@ -15,13 +15,29 @@ import zipfile
 
 from simulation_headers import collect_simulation_headers, validate_simulation_header_names
 
-VERSION = "2026.0.12"
+VERSION = "2026.0.13"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
     "windowsx86-64": ("windows/x86-64", "mecoSimAdapter.lib", ("frc_jolt.lib", "Jolt.lib")),
 }
 EPOCH = (1980, 1, 1, 0, 0, 0)
+
+
+def validate_build_provenance(build_provenance: dict, source_commit: str, release: bool) -> None:
+    if not build_provenance:
+        return
+    expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
+    expected_base_commit = {item.get("baseCommit") for item in build_provenance.values()}
+    expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
+    if (expected_base != {"2026.2.1"} or len(expected_base_commit) != 1 or
+            None in expected_base_commit or expected_sim_commit != {source_commit}):
+        raise ValueError("Platform builds must use the pinned Base version and matching source commits")
+    if release and any(
+        not item.get("baseWorkingTreeClean") or not item.get("simulationWorkingTreeClean")
+        for item in build_provenance.values()
+    ):
+        raise ValueError("Release platform builds must come from clean Simulation and Base checkouts")
 
 
 def add_file(archive: zipfile.ZipFile, source: Path, path: str) -> None:
@@ -139,18 +155,7 @@ def main() -> None:
             build_provenance[classifier] = json.loads(path.read_text(encoding="utf-8"))
         elif not args.allow_missing_platform:
             raise FileNotFoundError(f"Required build provenance is missing: {path}")
-    if build_provenance:
-        expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
-        expected_commit = {item.get("baseCommit") for item in build_provenance.values()}
-        expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
-        if (len(expected_base) != 1 or expected_base != {"2026.2.1"} or
-                len(expected_commit) != 1 or len(expected_sim_commit) != 1):
-            raise ValueError("Platform builds do not share the pinned split Base version and commit")
-        if not args.allow_missing_platform and any(
-            not item.get("baseWorkingTreeClean") or not item.get("simulationWorkingTreeClean")
-            for item in build_provenance.values()
-        ):
-            raise ValueError("Release platform builds must come from clean Simulation and Base checkouts")
+    validate_build_provenance(build_provenance, commit, not args.allow_missing_platform)
     manifest = {
         "version": VERSION,
         "sourceCommit": os.environ.get("GITHUB_SHA", commit),

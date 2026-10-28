@@ -60,6 +60,10 @@ def main() -> None:
     id 'edu.wpi.first.GradleRIO' version '2026.2.1'
 }
 def vendorCache = providers.environmentVariable('FRC_VENDOR_CACHE').orNull
+nativeUtils.platformConfigs.all {
+    cppCompiler.args.removeAll { it.startsWith('-std=') || it.startsWith('/std:') }
+    cppCompiler.args.add(name.startsWith('windows') ? '/std:c++20' : '-std=c++20')
+}
 if (vendorCache) {
     repositories {
         exclusiveContent {
@@ -105,6 +109,10 @@ model {
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulatedVision.h>
+#include <meco/sim/IdealVisionObservation.h>
+#include <meco/sim/ParticleContacts.h>
+#include <base/sim/FootprintClearance.h>
+#include <base/sim/SimulationTuning.h>
 #include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
@@ -137,6 +145,13 @@ int main() {
           frc::Rotation3d{0_deg, 0_deg, 180_deg}}}}, 10_m, 8_m};
   if (meco::sim::VisibleTags(floor, frc::Transform3d{}, tags,
                            60_deg, 50_deg, 3_m) != std::vector<int>{1}) return 31;
+  if (!meco::sim::MakeIdealVisionObservation(floor, 0_s, tags, true, 1_m, {1, 1, 1})) return 32;
+  if (!base::sim::IsFootprintClear(2, 2, 0, .4, .4, 1, 10, 8, 0, {})) return 33;
+  const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
+      {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
+  if (base::sim::DeriveSimulationTuning(tuning).maxLinearAcceleration <= 0) return 34;
+  std::vector<meco::sim::Particle> ground, airborne;
+  meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
   if (!HAL_Initialize(500, 0)) return 2;
   int result = 1;
   {
