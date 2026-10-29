@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument("--maven-repo", type=Path)
     parser.add_argument("--published", action="store_true", help="Resolve both vendordeps from their deployed Maven URLs")
     parser.add_argument("--meco-base-root", type=Path, required=True)
-    parser.add_argument("--expected-base-version", default="2026.2.5-dev.1")
+    parser.add_argument("--expected-base-version", default="2026.2.5")
     args = parser.parse_args()
     if not args.published and args.maven_repo is None:
         parser.error("--maven-repo is required unless --published is set")

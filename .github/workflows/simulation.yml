@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: Require a matching Base ref
         env:
-          SELECTED_BASE_REF: ${{ inputs.base_ref || vars.MECO_BASE_REF }}
+          SELECTED_BASE_REF: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.5' }}
         run: |
           if [[ -z "$SELECTED_BASE_REF" ]]; then
             echo "Set base_ref or MECO_BASE_REF to the compatible Base source ref" >&2
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: MECO-Robotics/MecoBase-cpp
-          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF }}
+          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.5' }}
           path: MecoBase-cpp
       - name: Pin selected Base ref to a commit
         id: pin
