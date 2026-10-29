@@ -15,7 +15,7 @@ import zipfile
 
 from simulation_headers import collect_simulation_headers, validate_simulation_header_names
 
-VERSION = "2026.0.13"
+VERSION = "2026.0.14"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
@@ -30,7 +30,7 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
     expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
     expected_base_commit = {item.get("baseCommit") for item in build_provenance.values()}
     expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
-    if (expected_base != {"2026.2.1"} or len(expected_base_commit) != 1 or
+    if (expected_base != {"2026.2.5"} or len(expected_base_commit) != 1 or
             None in expected_base_commit or expected_sim_commit != {source_commit}):
         raise ValueError("Platform builds must use the pinned Base version and matching source commits")
     if release and any(
@@ -121,7 +121,8 @@ def main() -> None:
         for base in (root / "adapters/wpilib-2026", root / "src", root / "include"):
             for path in sorted(item for item in base.rglob("*") if item.is_file() and "build" not in item.parts and ".gradle" not in item.parts and "gradle/wrapper/gradle-wrapper.jar" not in item.as_posix()):
                 add_file(archive, path, path.relative_to(root).as_posix())
-        for path in (root / "CMakeLists.txt", root / "Jolt-LICENSE", root / "README.md"):
+        for path in (root / "CMakeLists.txt", root / "Jolt-LICENSE", root / "README.md",
+                     root / "docs/practice-mode.md", root / "docs/autodrive.md"):
             if path.is_file():
                 add_file(archive, path, path.relative_to(root).as_posix())
 

@@ -24,6 +24,8 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "adapters/wpilib-2026/include/meco/sim/SimulatedVision.h",
                 root / "adapters/wpilib-2026/include/meco/sim/IdealVisionObservation.h",
                 root / "adapters/wpilib-2026/include/meco/sim/ParticleContacts.h",
+                root / "adapters/wpilib-2026/include/meco/sim/SimulatedPieceSensor.h",
+                root / "adapters/wpilib-2026/include/meco/sim/PracticeMatchController.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationDiagnostics.h",
                 root / "include/base/sim/fields/Rebuilt2026.h",
             )
@@ -49,6 +51,8 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/SimulatedVision.h",
                 "meco/sim/IdealVisionObservation.h",
                 "meco/sim/ParticleContacts.h",
+                "meco/sim/SimulatedPieceSensor.h",
+                "meco/sim/PracticeMatchController.h",
                 "meco/sim/SimulationDiagnostics.h",
                 "base/sim/fields/Rebuilt2026.h",
             })
@@ -67,6 +71,8 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/SimulatedVision.h",
                 "meco/sim/IdealVisionObservation.h",
                 "meco/sim/ParticleContacts.h",
+                "meco/sim/SimulatedPieceSensor.h",
+                "meco/sim/PracticeMatchController.h",
             "meco/sim/SimulationDiagnostics.h",
             "base/sim/fields/Rebuilt2026.h",
         }

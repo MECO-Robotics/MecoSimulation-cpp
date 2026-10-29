@@ -22,3 +22,9 @@ loop to decouple HAL joystick packet publication from SimGUI redraw frequency.
 `FRC_SIM_DS_PACKET_CLOCK=0` disables the latter. These helpers do not step plants.
 `DriveSimulationSession::PhysicsTruth()` returns full physical orientation and
 module contact loads; applications do not need to replace hardware feedback code.
+
+`SimulatedPieceSensor.h` injects typed observations into MecoBase perception;
+native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/autodrive.md).
+
+`PracticeMatchController.h` provides desktop-only NT practice sequencing and
+robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).

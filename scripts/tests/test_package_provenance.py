@@ -8,7 +8,7 @@ from package_vendordep import validate_build_provenance
 
 class PackageProvenanceTest(unittest.TestCase):
     def test_rejects_stale_libraries_even_when_platforms_agree(self):
-        platform = {"baseVendordepVersion": "2026.2.1", "baseCommit": "base",
+        platform = {"baseVendordepVersion": "2026.2.5", "baseCommit": "base",
                     "simulationCommit": "old", "baseWorkingTreeClean": True,
                     "simulationWorkingTreeClean": True}
         builds = {"linuxx86-64": platform, "windowsx86-64": platform}

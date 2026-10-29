@@ -29,8 +29,9 @@ configuration, and known limits.
 
 ## Install in a robot project
 
-The intended 2026 setup is MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. Configure each module's physical drive, steer, and encoder mounting
+The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
+2026.0.10. The current package requires Base 2026.2.5 and Simulation
+2026.0.14. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -44,7 +45,9 @@ The release workflow builds both desktop platforms, builds matching split Base
 archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
 temporary Maven repository. It links Linux and Windows Debug and Release
 consumers before its optional GitHub Pages publish job. The selected Base ref
-must contain the 2026.2.1 split package. The workflow resolves that ref once
+must contain the matching 2026.2.5 native AutoDrive/perception API for this
+development package. Set `MECO_BASE_REF` or the explicit `base_ref` input; there
+is no fallback to an older incompatible release. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
@@ -97,6 +100,12 @@ body orientation/contact loads without adding fields to the Base ABI. Field maps
 are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
 helpers are public `meco/sim` headers. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
 see the [release validation](docs/releases/2026.0.9.md).
+
+## Native AutoDrive and practice control
+
+The unpublished development package supplies simulated perception and NT practice
+match sequencing. Native planning/control and detection fusion live in MecoBase.
+See [AutoDrive boundaries](docs/autodrive.md) and [practice control](docs/practice-mode.md).
 
 ## Current compatibility
 
