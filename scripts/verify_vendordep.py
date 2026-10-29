@@ -75,7 +75,7 @@ def main() -> None:
             raise SystemExit(f"Checksum mismatch for {artifact}")
     provenance = manifest.get("buildProvenance", {})
     if not args.platform and (set(provenance) != set(CLASSIFIERS) or
-                              any(item.get("baseVendordepVersion") != "2026.2.4-dev.1" for item in provenance.values())):
+                              any(item.get("baseVendordepVersion") != "2026.2.5-dev.1" for item in provenance.values())):
         raise SystemExit("Full package lacks both platform builds or split Base provenance")
     print(f"Verified {len(required)} Maven files for {VERSION}")
 

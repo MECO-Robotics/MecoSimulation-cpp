@@ -1,8 +1,8 @@
 # Native AutoDrive and simulated perception
 
-The current unpublished `2026.0.13-dev.2` package supplies simulated sensing.
+The current unpublished `2026.0.14-dev.1` package supplies simulated sensing.
 Native planning/control and object-detection IO/clustering belong to
-MecoBase `2026.2.4-dev.1`, usable on desktop and roboRIO. There is no Python
+MecoBase `2026.2.5-dev.1`, usable on desktop and roboRIO. There is no Python
 companion or `AutoDriveBridge` in the current package. The earlier dev.1
 prototype validation is historical, not evidence for the current architecture.
 

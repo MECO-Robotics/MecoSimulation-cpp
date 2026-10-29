@@ -30,7 +30,7 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
     expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
     expected_base_commit = {item.get("baseCommit") for item in build_provenance.values()}
     expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
-    if (expected_base != {"2026.2.1"} or len(expected_base_commit) != 1 or
+    if (expected_base != {"2026.2.5-dev.1"} or len(expected_base_commit) != 1 or
             None in expected_base_commit or expected_sim_commit != {source_commit}):
         raise ValueError("Platform builds must use the pinned Base version and matching source commits")
     if release and any(

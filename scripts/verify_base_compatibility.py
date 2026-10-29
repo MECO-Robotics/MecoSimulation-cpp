@@ -34,7 +34,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--descriptor", type=Path, required=True)
     parser.add_argument("--drive-header", type=Path, required=True)
-    parser.add_argument("--expected-version", default="2026.2.4-dev.1")
+    parser.add_argument("--expected-version", default="2026.2.5-dev.1")
     args = parser.parse_args()
     validate(args.descriptor, args.drive_header, args.expected_version)
     print(f"Verified split MecoBase {args.expected_version} integration boundary")
