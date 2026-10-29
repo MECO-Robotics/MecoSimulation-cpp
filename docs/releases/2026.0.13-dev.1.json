@@ -1,0 +1,103 @@
+{
+  "scenario": "native-autodrive-trench",
+  "seed": 3737,
+  "binary_sha256": "004118e35ecf1d8d1fb8e2e3583d8c8969679d56dae0e13aa5286ae68010beca",
+  "checks": {
+    "following_with_fresh_command": true,
+    "stale_companion_stops": true,
+    "native_physics_reaches_goal": true,
+    "release_stops_and_relinquishes_drive": true,
+    "perception_excludes_hidden_truth": true,
+    "disable_cancels_drive": true,
+    "red_fixed_field_navigation": true,
+    "autonomous_chooser_runs_navigation": true
+  },
+  "stale_module_target_mps": 0.0,
+  "start": [
+    3.6500000953674316,
+    0.6393179893493652,
+    0.0
+  ],
+  "goal": [
+    5.4500000953674315,
+    0.6393179893493652
+  ],
+  "end_truth": [
+    5.386410107430093,
+    0.6366952457542225,
+    -0.0003106726352442648
+  ],
+  "endpoint_error_m": 0.06364405195960356,
+  "status": "arrived",
+  "red_endpoint_error_m": 0.06928371555481128,
+  "auto_endpoint_error_m": 0.0734958404719924,
+  "passed": true,
+  "vendordep": {
+    "name": "MecoSimulation",
+    "version": "2026.0.13-dev.1",
+    "publication": "local, unpublished development package",
+    "maven": "../MecoSimulation-cpp-autodrive/build/autodrive-package/maven",
+    "companion_sha256": "6ab77b9b3975a9f2f3aeaa377998e27c34a38f6189f86c7829543aa9cea07964",
+    "installed_companion_matches_artifact": true,
+    "maven_artifact_sha256": {
+      "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13-dev.1/meco-simulation-wpilib-cpp-2026.0.13-dev.1-headers.zip": "4da13165084fc7a8d04b5171220fb7b47a99be97f5f2f939b6228600fad4d29e",
+      "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13-dev.1/meco-simulation-wpilib-cpp-2026.0.13-dev.1-linuxx86-64static.zip": "a03ee9fd60e381e87af04edff1da0441e45a2dc41d88ed366fd4959b20f25790",
+      "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13-dev.1/meco-simulation-wpilib-cpp-2026.0.13-dev.1-linuxx86-64staticdebug.zip": "9e59af5679f883420720b3fc9260ca0eb4e0fd12ba9199c5ecd3c41b61db78e0",
+      "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13-dev.1/meco-simulation-wpilib-cpp-2026.0.13-dev.1-sources.zip": "8101c6f6bf266c72bba1d8eaf1fcc5d8eac48066da7faf3306b57f461ba9d5bd",
+      "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13-dev.1/meco-simulation-wpilib-cpp-2026.0.13-dev.1.pom": "a20ab2b0dedbff377eec71519d761e760c00d9a48c53412388a5efbbd1a3869b"
+    }
+  },
+  "source": {
+    "robot_base_revision": "9f923d818f0db03ff5bbfedadcaf8ca0423d1eff",
+    "simulation_base_revision": "07facfc5de0213ce238ed59a2d49c5ce90a6502b",
+    "autodrive_revision": "d74b0a15e25ddbc6bacfbbb864674371629bb19e",
+    "robot_files_sha256": {
+      "build.gradle": "4d2f4cda39e64e84790101b98ca2cd3f756237f59271a6f8fbe79e8df3a43e16",
+      "vendordeps/MecoSimulation.json": "e9d78a7032a691d94e417d3575a61b9bc3cb15e83b34f1919b17131c78dce0a8",
+      "src/main/cpp/season/AutoDriveSimulation.cpp": "8d88b3a97910717fede7dfb6d66c07e4bf24eb145a7b47772231c883a81ea6fa",
+      "src/main/include/season/AutoDriveSimulation.h": "72abda2bebf6c87cdba49abe811705a3b1d6f9b4b62c2722cd3878b94e07466d",
+      "src/main/include/season/SimulatedLocalization.h": "e5c1c7f4fdaa4b6126d62e7aef5c958050929b4d392accb4b8a4c3537144de38",
+      "src/main/include/season/SimulationPose.h": "9c15f984300b37c0907228dca169827b6c90dfeada52b71d7e9260d99664aa71",
+      "src/main/cpp/RobotContainer.cpp": "d9e6b0b83c71ce345825fd81088715661e383a3d7067dc610c709491f578b520",
+      "src/main/include/RobotContainer.h": "18803d0fff3d7cb9f8996d49e2ee4db3c1bcee1975b9f3d70348cecd364a4864",
+      "scripts/autodrive_sim.py": "fbd0bc15d2b6fd29cfc8d3338a738e22de525bbea25b8fd3296453d00f60fdf5",
+      "scripts/autodrive_smoke.py": "4304f1342cbb36a5668253859083b0333f8cfff18c52c5ef67469e9f313aca93"
+    },
+    "vendor_files_sha256": {
+      "adapters/wpilib-2026/src/AutoDriveBridge.cpp": "8c224186a66ffe07dd190787e87a8d7ed4b2c41076451a2a7d04ca47bcc3eeb5",
+      "adapters/wpilib-2026/include/meco/sim/AutoDriveBridge.h": "97a02fcd3b28125eb0a4f34b067afb8e8f0614424e1a57db791a81de2c60487a",
+      "tools/autodrive/meco_autodrive/companion.py": "5cc0809d295a185f10334a3505e72c3be811ce4403fbeec85368d34d81768326",
+      "tools/autodrive/meco_autodrive/perception.py": "70697fb06cb463bd69de0696f5b23ed713b154b507a6e7bd9d5dfd5954aaaa46",
+      "tools/autodrive/meco_autodrive/cli.py": "750851d117e94552e7c3be49088c89562c8345d1a66c4e5172ddcd1db7bf67f5",
+      "scripts/package_vendordep.py": "003b6ac580e97289d3b436a6eab0002711bf1022abdc87d11db36abcdd32ef5a",
+      "scripts/verify_vendordep.py": "27f8904a279fa8ee704acd3fae7296714b3d81c744413af9dc525c264d558c47",
+      "scripts/autodrive_tools.py": "a32877645fbb102a7c4b5a86f6f3d7443e3979ef0a1abc67e102633f423ba4e4",
+      "scripts/autodrive_consumer_smoke.py": "797c136af5c969196609718c8d1848f055ce8043cf3bed0b3672032b4dd5e36f",
+      "scripts/consumer_smoke.py": "c0a680fc7e5542191dcbb2b4dbf084e1cfc92cee059bcf41289672f31c56ab5b",
+      "scripts/tests/test_autodrive.py": "b81ff9f9602f78da2a62be7f667283fc552ec04134e7f72c6f4579014e3b37db",
+      "scripts/tests/test_autodrive_tools.py": "47644bd63eac72d0dd9096eb5a063973cc2ed29c1bad595ef964b307379dd1a6",
+      ".github/workflows/simulation.yml": "efea6404d219a2955bc5520a312cd4e268133454044d0360cf735f90ac21f377"
+    }
+  },
+  "validation": {
+    "robot_build_command": "JAVA_HOME=/home/brian/wpilib/2026/jdk ./gradlew build -PmecoSimulationMaven=../MecoSimulation-cpp-autodrive/build/autodrive-package/maven --max-workers=2",
+    "robot_targets": [
+      "desktop Debug",
+      "desktop Release",
+      "roboRIO Debug",
+      "roboRIO Release"
+    ],
+    "robot_tests_per_desktop_configuration": 6,
+    "package_unit_tests": 18,
+    "isolated_artifact_behavior_tests": 3,
+    "clean_native_consumers": [
+      "Linux Debug link and execution",
+      "Linux Release link and execution"
+    ],
+    "runtime_checks_passed": 8,
+    "windows": "not built locally; CI consumer gates updated",
+    "public_maven": "not published",
+    "dashboard_stack": "not used",
+    "hardware": "not exercised"
+  }
+}

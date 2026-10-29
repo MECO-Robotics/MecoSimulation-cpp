@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument("--maven-repo", type=Path)
     parser.add_argument("--published", action="store_true", help="Resolve both vendordeps from their deployed Maven URLs")
     parser.add_argument("--meco-base-root", type=Path, required=True)
-    parser.add_argument("--expected-base-version", default="2026.2.1")
+    parser.add_argument("--expected-base-version", default="2026.2.4-dev.1")
     args = parser.parse_args()
     if not args.published and args.maven_repo is None:
         parser.error("--maven-repo is required unless --published is set")
@@ -103,6 +103,9 @@ model {
 #include <hal/HAL.h>
 #include <frc/geometry/Pose2d.h>
 #include <frc/simulation/SimHooks.h>
+#include <frc/simulation/DriverStationSim.h>
+#include <networktables/NetworkTable.h>
+#include <networktables/StringTopic.h>
 #include <base/PortableSwerve.h>
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
@@ -113,6 +116,8 @@ model {
 #include <meco/sim/ParticleContacts.h>
 #include <base/sim/FootprintClearance.h>
 #include <base/sim/SimulationTuning.h>
+#include <meco/sim/SimulatedPieceSensor.h>
+#include <meco/sim/PracticeMatchController.h>
 #include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
@@ -152,7 +157,35 @@ int main() {
   if (base::sim::DeriveSimulationTuning(tuning).maxLinearAcceleration <= 0) return 34;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
+  meco::sim::PieceSensorConfig sensorConfig;
+  sensorConfig.dropout=0; sensorConfig.angularNoise=0;
+  meco::sim::SimulatedPieceSensor sensor(sensorConfig);
+  const std::vector<frc::Translation3d> points{{2_m,0_m,0_m},{-1_m,0_m,0_m}};
+  const auto ray=sensor.Observe(frc::Pose3d{}, points, {}, 1_s);
+  if (!ray || std::abs(ray->yawDegrees)>1e-9) return 40;
+  base::sim::BodySpec blocker;
+  blocker.pose.position={1,0,0};
+  const std::vector<base::sim::BodySpec> blockers{blocker};
+  if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
+  // Verify the packaged implementation, including both station mappings.
+  auto practiceNt=nt::NetworkTableInstance::Create();
+  practiceNt.StartLocal();
+  {
+    meco::sim::PracticeMatchController practice({20,3,140},practiceNt);
+    auto table=practiceNt.GetTable("/Sim/Practice");
+    auto command=table->GetStringTopic("Command").Publish();
+    for(const auto& [station,expected]: std::vector<std::pair<std::string,HAL_AllianceStationID>>{
+          {"Blue1",HAL_AllianceStationID_kBlue1},{"Red1",HAL_AllianceStationID_kRed1}}) {
+      table->GetEntry("Config/AllianceStation").SetString(station);
+      command.Set("start");practice.Update();
+      if(!frc::sim::DriverStationSim::GetEnabled() ||
+          frc::sim::DriverStationSim::GetAllianceStationId()!=expected) return 42;
+      command.Set("abort");practice.Update();
+      if(frc::sim::DriverStationSim::GetEnabled()) return 43;
+    }
+  }
+  practiceNt.StopLocal();nt::NetworkTableInstance::Destroy(practiceNt);
   int result = 1;
   {
   base::DriveConfig config{};
