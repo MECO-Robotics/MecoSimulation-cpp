@@ -1,0 +1,8 @@
+flowchart LR
+  Commands[Motor requests] --> Physics[Drive physics and contact]
+  Physics --> Truth[Simulated physical state]
+  Truth --> Sensors[Simulated sensor readings]
+  Sensors --> Estimate[Robot pose estimate]
+  Physics --> Current[Battery-side current]
+  Current --> Battery[Shared battery estimate]
+  Battery -->|next period| Physics

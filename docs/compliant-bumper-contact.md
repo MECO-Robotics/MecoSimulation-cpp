@@ -6,6 +6,13 @@ three-argument `CreateDriveSimulationAdapter` overload. The existing overload
 retains rigid bumper contact. Compliance requires Full3D; the season retains its
 legacy planar fallback.
 
+## Start here
+
+- The application supplies dimensions and material estimates through `RobotContactConfig`.
+- Full3D models compliant foam and rigid backing/pan contacts. Rigid pieces can still catch on terrain or high-center.
+- The pressure curve, damping, and friction are estimates; simulated impacts do not establish real-world performance.
+- The older adapter overload retains rigid contact. See [Jolt simulation models](jolt-simulation.md) for the physics boundary and [bump contact](bump-contact.md) for the earlier rigid study.
+
 ## Construction and frames
 
 All configured heights reference unloaded carpet. The solid pan bottom starts at

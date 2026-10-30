@@ -21,6 +21,10 @@ box plates pitched around the field Y axis. `TerrainBoundaries` splits a path
 at plate edges, and `TerrainGrade` samples its signed grade at the segment
 midpoint. Applications choose colliders, obstacle margins, and terrain policy.
 
+## Learn the simulator
+
+Start with [simulation basics](docs/simulation-basics.md) for physics, battery, and practice matches.
+
 ## Build and test
 
 ```sh

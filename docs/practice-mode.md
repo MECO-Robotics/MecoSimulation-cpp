@@ -1,5 +1,7 @@
 # Practice-match controller (desktop only)
 
+For the broader physics and battery overview, see [simulation basics](simulation-basics.md).
+
 `meco/sim/PracticeMatchController.h` exposes the reusable native
 `PracticeMatchController`. Construct it only when `frc::RobotBase::IsSimulation()`
 is true, keep it alive for the robot lifetime, and call `Update()` once per
