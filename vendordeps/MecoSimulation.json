@@ -1,20 +1,20 @@
 {
   "fileName": "MecoSimulation.json",
   "name": "MECO Simulation 2026",
-  "version": "2026.0.14",
+  "version": "2026.0.15",
   "uuid": "b4b09b34-3d47-4fea-a5f9-93a7e8d6c9b1",
   "frcYear": "2026",
   "mavenUrls": [
     "https://meco-robotics.github.io/MecoSimulation-cpp/maven"
   ],
-  "jsonUrl": "https://raw.githubusercontent.com/MECO-Robotics/MecoSimulation-cpp/v2026.0.14/vendordeps/MecoSimulation.json",
+  "jsonUrl": "https://raw.githubusercontent.com/MECO-Robotics/MecoSimulation-cpp/v2026.0.15/vendordeps/MecoSimulation.json",
   "javaDependencies": [],
   "jniDependencies": [],
   "cppDependencies": [
     {
       "groupId": "com.mecorobotics.sim",
       "artifactId": "meco-simulation-wpilib-cpp",
-      "version": "2026.0.14",
+      "version": "2026.0.15",
       "libName": "mecoSimAdapter",
       "headerClassifier": "headers",
       "sourcesClassifier": "sources",

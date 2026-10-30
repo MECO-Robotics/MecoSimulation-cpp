@@ -16,6 +16,11 @@ The bridge creates a shared drive and arena simulation session on Base's fixed
 step runtime. The Simulation vendordep exports its own physics and adapter
 headers; the matching Base vendordep supplies `base/...` headers.
 
+`base/sim/ColliderTerrain.h` derives plan-view bounds and grades for static
+box plates pitched around the field Y axis. `TerrainBoundaries` splits a path
+at plate edges, and `TerrainGrade` samples its signed grade at the segment
+midpoint. Applications choose colliders, obstacle margins, and terrain policy.
+
 ## Build and test
 
 ```sh
@@ -31,7 +36,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.5 and Simulation
-2026.0.14. Configure each module's physical drive, steer, and encoder mounting
+2026.0.15. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
