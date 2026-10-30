@@ -1,0 +1,16 @@
+name: Tested package release validation
+on:
+  pull_request:
+    paths:
+      - '.github/release/**'
+      - '.github/workflows/publish-tested-package.yml'
+      - '.github/workflows/release-validation.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: python3 -m unittest discover -s .github/release/tests
