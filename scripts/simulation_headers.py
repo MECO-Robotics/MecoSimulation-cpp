@@ -19,6 +19,7 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/SimulatedVision.h",
     "meco/sim/IdealVisionObservation.h",
     "meco/sim/ParticleContacts.h",
+    "meco/sim/ParticleFieldContacts.h",
     "meco/sim/SimulatedPieceSensor.h",
     "meco/sim/PracticeMatchController.h",
     "meco/sim/SimulationDiagnostics.h",
