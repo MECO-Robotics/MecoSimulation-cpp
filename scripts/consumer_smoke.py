@@ -114,6 +114,7 @@ model {
 #include <meco/sim/SimulatedVision.h>
 #include <meco/sim/IdealVisionObservation.h>
 #include <meco/sim/ParticleContacts.h>
+#include <meco/sim/ParticleFieldContacts.h>
 #include <base/sim/FootprintClearance.h>
 #include <base/sim/SimulationTuning.h>
 #include <meco/sim/SimulatedPieceSensor.h>
@@ -157,6 +158,10 @@ int main() {
   if (base::sim::DeriveSimulationTuning(tuning).maxLinearAcceleration <= 0) return 34;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
+  const meco::sim::ParticleFieldContacts field{base::sim::fields::rebuilt2026::ParticleFieldColliders()};
+  ground.push_back({{.03, 2, .5}, {-1, 0, 0}});
+  field.Resolve(ground, .07, .25);
+  if (ground.front().position.x < .069 || ground.front().velocity.x <= 0) return 44;
   meco::sim::PieceSensorConfig sensorConfig;
   sensorConfig.dropout=0; sensorConfig.angularNoise=0;
   meco::sim::SimulatedPieceSensor sensor(sensorConfig);
