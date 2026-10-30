@@ -1,0 +1,6 @@
+flowchart LR
+  Disabled[Disabled and no E-stop] --> Start[Start command]
+  Start --> Auto[Autonomous]
+  Auto --> Gap[Disabled assessment]
+  Gap --> Teleop[Teleop]
+  Teleop --> Done[Complete and disabled]

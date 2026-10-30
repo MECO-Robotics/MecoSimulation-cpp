@@ -2,6 +2,22 @@
 
 For the broader physics and battery overview, see [simulation basics](simulation-basics.md).
 
+## Quick start
+
+Want a full simulated match? Give the controller your match timing, then start it while the robot is disabled.
+
+![Practice match phases](visuals/practice-flow.png)
+
+[Diagram source](visuals/practice-flow.mmd)
+
+1. Create `PracticeMatchController` in simulation with your phase durations.
+2. Keep it alive and call `Update()` once per simulation period. This does not advance physics.
+3. Disable the robot, clear E-stop, and send a fresh `start` to `/Sim/Practice/Command`.
+4. Watch `/Sim/Practice/State` and `/Sim/Practice/Reason`. Leave the Driver Station controls alone during the match; a manual change can abort it.
+
+The application supplies any dashboard button and season game rules. See [PracticeMatchController.h](../adapters/wpilib-2026/include/meco/sim/PracticeMatchController.h) and the full topic contract below.
+
+
 `meco/sim/PracticeMatchController.h` exposes the reusable native
 `PracticeMatchController`. Construct it only when `frc::RobotBase::IsSimulation()`
 is true, keep it alive for the robot lifetime, and call `Update()` once per

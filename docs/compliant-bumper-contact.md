@@ -8,9 +8,15 @@ legacy planar fallback.
 
 ## Start here
 
-- The application supplies dimensions and material estimates through `RobotContactConfig`.
-- Full3D models compliant foam and rigid backing/pan contacts. Rigid pieces can still catch on terrain or high-center.
-- The pressure curve, damping, and friction are estimates; simulated impacts do not establish real-world performance.
+Trying to understand why the robot catches on a bump? Start with the foam, backing, and pan.
+
+![Simplified contact layers and rigid pan](visuals/contact-layers.png)
+
+[Diagram source](visuals/contact-layers.mmd)
+
+- Put your robot’s dimensions and material estimates in `RobotContactConfig`.
+- Full3D models foam that compresses, plus a rigid backing and pan. Those rigid parts can still catch or high-center.
+- Pressure, damping, and friction are estimates. A successful simulated crossing is not proof that the real robot will cross.
 - The older adapter overload retains rigid contact. See [Jolt simulation models](jolt-simulation.md) for the physics boundary and [bump contact](bump-contact.md) for the earlier rigid study.
 
 ## Construction and frames

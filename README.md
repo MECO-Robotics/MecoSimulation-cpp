@@ -21,6 +21,15 @@ box plates pitched around the field Y axis. `TerrainBoundaries` splits a path
 at plate edges, and `TerrainGrade` samples its signed grade at the segment
 midpoint. Applications choose colliders, obstacle margins, and terrain policy.
 
+## Find a guide
+
+| I want to… | Start here | More detail |
+| --- | --- | --- |
+| Understand desktop physics | [Simulation basics](docs/simulation-basics.md) | [Jolt model and limits](docs/jolt-simulation.md) |
+| Configure bumper contact | [Contact quick start](docs/compliant-bumper-contact.md#start-here) | [Contact solver and telemetry](docs/compliant-bumper-contact.md) |
+| Run a simulated practice match | [Practice quick start](docs/practice-mode.md#quick-start) | [NetworkTables contract](docs/practice-mode.md#nt-contract) |
+| Simulate object observations | [Simulated perception](docs/autodrive.md) | [Piece sensor API](adapters/wpilib-2026/include/meco/sim/SimulatedPieceSensor.h) |
+
 ## Learn the simulator
 
 Start with [simulation basics](docs/simulation-basics.md) for physics, battery, and practice matches.
@@ -112,7 +121,7 @@ see the [release validation](docs/releases/2026.0.9.md).
 
 ## Native AutoDrive and practice control
 
-The unpublished development package supplies simulated perception and NT practice
+The package supplies simulated perception and NT practice
 match sequencing. Native planning/control and detection fusion live in MecoBase.
 See [AutoDrive boundaries](docs/autodrive.md) and [practice control](docs/practice-mode.md).
 
@@ -291,7 +300,7 @@ The portable benchmark measures model/arena/Jolt work, excluding command
 execution and telemetry. Run it on each intended development/practice machine;
 CI runner results alone cannot establish that machine's deadline behavior.
 Review p99 and individual misses, configuration, contacts, and body counts
-alongside CPU/build metadata. See [the verification record](../artifacts/jolt/STATUS.md)
+alongside CPU/build metadata. See the verification record in the season project
 for retained successful and failed evidence. Simulation acceptance does not
 establish hardware calibration, CAN timing, or physical safety.
 

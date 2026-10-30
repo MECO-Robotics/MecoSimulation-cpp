@@ -1,6 +1,6 @@
 # Simulation basics
 
-MecoSimulation supplies reusable desktop physics. A robot project supplies its own mass, dimensions, gearing, field setup, and game behavior.
+Want to try robot code without the robot? MecoSimulation provides desktop physics. Your robot project supplies its dimensions, mass, gearing, field setup, and game rules.
 
 ![Simulation physics, sensors, and battery flow](visuals/simulation-basics.png)
 
@@ -8,10 +8,10 @@ MecoSimulation supplies reusable desktop physics. A robot project supplies its o
 
 ## Drive and contact
 
-- The 3D model uses hard-mounted wheel contact. Supported wheels can produce modeled tire forces; an unsupported wheel has no ground traction.
-- Steering load depends on the estimated contact patch and wheel load. It is an approximation, not a carpet measurement.
-- Optional compliant contact models foam and rigid backing. The robot project supplies its construction assumptions.
-- Physics truth and the pose estimated from sensors are separate. Neither is a measurement of a real robot.
+- The 3D model treats wheels as hard-mounted. A wheel off the ground has no modeled traction.
+- Steering gets harder when the modeled wheel is loaded. The contact patch is an estimate.
+- Optional bumper contact includes foam and rigid backing. You supply the dimensions and material estimates.
+- The simulated physical pose and the sensor-based pose estimate can differ. Both are simulated.
 
 Read [Jolt simulation models](jolt-simulation.md), [compliant contact](compliant-bumper-contact.md), and [DrivePhysics](../include/base/sim/DrivePhysics.h).
 
