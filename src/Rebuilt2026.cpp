@@ -74,4 +74,28 @@ std::vector<base::sim::BodySpec> FieldColliders() {
     }
     return bodies;
 }
+std::vector<base::sim::BodySpec> ParticleFieldColliders() {
+    auto bodies = FieldColliders();
+    // Replace only the two solid hub chassis envelopes with hollow walls.
+    for (double x : {kBlueHubX, kRedHubX}) {
+        for (auto it = bodies.begin(); it != bodies.end(); ++it) {
+            if (std::abs(it->pose.position.x - x) < 1e-6 &&
+                std::abs(it->pose.position.y - kHubY) < 1e-6 &&
+                std::abs(it->halfExtents.z - In(72)/2) < 1e-6 &&
+                std::abs(it->halfExtents.x - In(47)/2) < 1e-6) {
+                bodies.erase(it);
+                break;
+            }
+        }
+        constexpr double wall = In(1);
+        for (double sign : {-1., 1.}) {
+            bodies.push_back(Box(x + sign * (In(47)-wall)/2, kHubY, In(72)/2,
+                                 wall, In(47), In(72)));
+            bodies.push_back(Box(x, kHubY + sign * (In(47)-wall)/2, In(72)/2,
+                                 In(47)-2*wall, wall, In(72)));
+        }
+    }
+    return bodies;
+}
+
 }

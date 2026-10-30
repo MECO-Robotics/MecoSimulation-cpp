@@ -36,7 +36,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.5 and Simulation
-2026.0.15. Configure each module's physical drive, steer, and encoder mounting
+2026.0.16. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -313,3 +313,11 @@ height offset. `meco/sim/SimulatedVision.h` provides `VisibleTags` with camera
 mount, field layout, full horizontal/vertical angles and maximum range supplied
 by the caller. These ideal geometric helpers do not model occlusion or noise;
 sensor settings and alignment policy remain application-owned.
+
+The 2026 field also exposes `ParticleFieldColliders()`, a static-box
+approximation for particle contact. Its hub walls leave the top open, unlike
+the solid chassis envelope. The WPILib adapter's `ParticleFieldContacts`
+resolves spherical particles against those boxes; use short simulation
+substeps because contact detection is discrete. Field boundaries, ramps,
+trench structures, tower and depot geometry are simplified, not a complete
+representation of the official field.
