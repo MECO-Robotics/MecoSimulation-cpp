@@ -68,9 +68,15 @@ std::vector<base::sim::BodySpec> FieldColliders() {
         const double sign = red ? -1 : 1;
         const double wallX = red ? kFieldLength : 0;
         for (double side : {-1.,1.})
-            bodies.push_back(Box(wallX+sign*In(27)/2,y+side*In(42-3)/2,
-                                 In(1.125)/2,In(27),In(3),In(1.125)));
-        bodies.push_back(Box(wallX+sign*In(3)/2,y,In(1.125)/2,In(3),In(42),In(1.125)));
+        {
+            auto rail = Box(wallX+sign*In(27)/2,y+side*In(42-3)/2,
+                            In(1.125)/2,In(27),In(3),In(1.125));
+            rail.friction = kDepotContactFriction;
+            bodies.push_back(rail);
+        }
+        auto rail = Box(wallX+sign*In(3)/2,y,In(1.125)/2,In(3),In(42),In(1.125));
+        rail.friction = kDepotContactFriction;
+        bodies.push_back(rail);
     }
     return bodies;
 }

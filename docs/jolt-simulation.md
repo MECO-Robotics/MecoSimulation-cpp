@@ -48,3 +48,5 @@ Call [`UpdateBatterySupply`](../adapters/wpilib-2026/include/meco/sim/BatterySup
 ## Limits
 
 The model does not validate Phoenix or REV firmware, CAN timing, hardware calibration, or physical safety. Linux and Windows desktop builds are the vendordep support targets. Other platforms may compile the standalone CMake project but are not part of the published compatibility claim.
+
+The REBUILT depot rails retain their field dimensions. Their painted-steel contact uses a provisional sliding coefficient of 0.05; Jolt combines it with the robot contact material by geometric mean. This allows a bumper to slide up the rail under drive force, and is not a measured material calibration.

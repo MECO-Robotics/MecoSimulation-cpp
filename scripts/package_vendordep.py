@@ -15,7 +15,7 @@ import zipfile
 
 from simulation_headers import collect_simulation_headers, validate_simulation_header_names
 
-VERSION = "2026.0.16"
+VERSION = "2026.0.17"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),

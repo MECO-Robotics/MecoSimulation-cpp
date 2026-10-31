@@ -49,7 +49,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.5 and Simulation
-2026.0.16. Configure each module's physical drive, steer, and encoder mounting
+2026.0.17. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
