@@ -48,27 +48,39 @@ configuration, and known limits.
 ## Install in a robot project
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. The current package requires Base 2026.2.5 and Simulation
-2026.0.16. Configure each module's physical drive, steer, and encoder mounting
+2026.0.10. The current package requires Base 2026.2.12 and Simulation
+2026.0.17. This pair rebuilds the adapter for the configurable control-timing
+and CAN-rate APIs; use these matching packages together rather than mixing the
+new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
-starts. The release workflow publishes matching Base Maven artifacts alongside
-the Simulation package.
+starts. The release workflow resolves the matching Base Maven artifacts for
+clean consumer checks; Base and Simulation remain separate published vendordeps.
 Release 2026.0.6 added a ground collider to the standalone 3D drive world. The
 Base package alone remains sufficient for roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 
-The release workflow builds both desktop platforms, builds matching split Base
-archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
-temporary Maven repository. It links Linux and Windows Debug and Release
-consumers before its optional GitHub Pages publish job. The selected Base ref
-must contain the matching 2026.2.5 native AutoDrive/perception API for this
+The release workflow verifies the immutable 2026.0.16 release archives and
+reuses only their unchanged Jolt/core objects. It rebuilds the three WPILib
+adapter objects against the selected Base headers, checks every retained core
+object against the pinned release archive, and uses the published matching
+Base Maven artifacts when assembling a temporary consumer repository. It links
+Linux and Windows Debug and Release consumers before its optional GitHub Pages
+publish job. It skips rebuilding CMake/include/src/tests only when their trees
+exactly match the pinned v2026.0.16 release; consumer links still validate the new
+adapter with the selected Base. If those core trees change, CI runs the full
+Release test and Debug build path and records that source-build provenance. The selected Base ref
+must contain the matching 2026.2.12 native AutoDrive/perception API for this
 development package. Set `MECO_BASE_REF` or the explicit `base_ref` input; there
 is no fallback to an older incompatible release. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
+The Base checksum manifest must still identify the selected 2026.2.12 commit.
+For reruns after a later Base release replaces the Pages root manifest, add
+`scripts/base-2026.2.12-SHA256SUMS.json` and its `.sha256` pin from the verified
+Base 2.12 deployment; the downloader prefers that immutable snapshot.
 Set both `paired_base_ref` and `paired_base_version` when dispatching a release
 to additionally check that published Base version with the new Simulation
 package on Linux and Windows in Debug and Release. The minimum Base checks
@@ -334,3 +346,9 @@ resolves spherical particles against those boxes; use short simulation
 substeps because contact detection is discrete. Field boundaries, ramps,
 trench structures, tower and depot geometry are simplified, not a complete
 representation of the official field.
+
+The Base 2026.2.12 checksum snapshot in `scripts/base-2026.2.12-SHA256SUMS.json`
+is pinned to release source `660eb31` and the assembled artifact from
+[release run 41534819397](https://github.com/MECO-Robotics/MecoBase-cpp/actions/runs/41534819397).
+The downloader checks this snapshot and every immutable Maven coordinate, so a
+later Base release changing the site root cannot change this build.

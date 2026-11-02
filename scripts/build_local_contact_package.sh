@@ -21,7 +21,7 @@ for configuration in Release Debug; do
     cp -- "$root/adapters/wpilib-2026/build/libs/mecoSimAdapter/static/${configuration,,}/libmecoSimAdapter.a" "$destination/"
 done
 python3 "$root/scripts/write_build_provenance.py" --base-root "$root/../MecoBase-cpp" \
-    --platform linuxx86-64 --output "$root/build/contact-stage/linuxx86-64/provenance.json"
+    --platform linuxx86-64 --build-mode full-source-build --output "$root/build/contact-stage/linuxx86-64/provenance.json"
 python3 "$root/scripts/package_vendordep.py" --build-root "$root/build/contact-stage" \
     --output "$root/build/contact-package" --allow-missing-platform windowsx86-64
 python3 "$root/scripts/verify_vendordep.py" --maven-root "$root/build/contact-package/maven" --platform linuxx86-64

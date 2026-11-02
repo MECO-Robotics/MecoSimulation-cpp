@@ -71,8 +71,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
         configuration: [Debug, Release]
         base:
-          - {ref: v2026.2.5, version: '2026.2.5'}
-          - {ref: v2026.2.10, version: '2026.2.10'}
+          - {ref: v2026.2.12, version: '2026.2.12'}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 3
     steps:

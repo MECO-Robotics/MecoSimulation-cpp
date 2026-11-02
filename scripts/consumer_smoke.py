@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument("--maven-repo", type=Path)
     parser.add_argument("--published", action="store_true", help="Resolve both vendordeps from their deployed Maven URLs")
     parser.add_argument("--meco-base-root", type=Path, required=True)
-    parser.add_argument("--expected-base-version", default="2026.2.5")
+    parser.add_argument("--expected-base-version", default="2026.2.12")
     args = parser.parse_args()
     if not args.published and args.maven_repo is None:
         parser.error("--maven-repo is required unless --published is set")
@@ -41,13 +41,6 @@ def main() -> None:
         (root / "vendordeps").mkdir()
         shutil.copy2(base_descriptor, root / "vendordeps/MecoBase.json")
         shutil.copy2(simulation_root / "vendordeps/MecoSimulation.json", root / "vendordeps/MecoSimulation.json")
-        base_json_path = root / "vendordeps/MecoBase.json"
-        base_json = base_json_path.read_text(encoding="utf-8")
-        if base_coordinate is not None and base_coordinate.is_dir():
-            base_json = base_json.replace(
-                "https://meco-robotics.github.io/MecoBase-cpp/maven", repo_url
-            )
-        base_json_path.write_text(base_json, encoding="utf-8")
         simulation_descriptor = root / "vendordeps/MecoSimulation.json"
         if not args.published:
             simulation_descriptor.write_text(
@@ -62,7 +55,7 @@ def main() -> None:
 def vendorCache = providers.environmentVariable('FRC_VENDOR_CACHE').orNull
 nativeUtils.platformConfigs.all {
     cppCompiler.args.removeAll { it.startsWith('-std=') || it.startsWith('/std:') }
-    cppCompiler.args.add(name.startsWith('windows') ? '/std:c++20' : '-std=c++20')
+    cppCompiler.args.add(name.startsWith('windows') ? '/std:c++latest' : '-std=c++23')
 }
 if (vendorCache) {
     repositories {
@@ -74,6 +67,23 @@ if (vendorCache) {
                 }
             }
             filter { includeGroup('com.studica.frc') }
+        }
+    }
+}
+def baseConsumerMaven = providers.gradleProperty('baseConsumerMaven').orNull
+if (baseConsumerMaven) {
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'stagedMecoBaseConsumer'
+                    url = uri(baseConsumerMaven)
+                    metadataSources { mavenPom(); artifact() }
+                }
+            }
+            filter {
+                includeModule('com.mecorobotics.frc', 'meco-base-cpp')
+            }
         }
     }
 }
@@ -251,6 +261,8 @@ int main() {
 """, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
         command = [str(wrapper), "-p", str(root), "consumer" + args.configuration + "Executable", "--no-daemon", "--max-workers=2"]
+        if base_coordinate is not None and base_coordinate.is_dir():
+            command.append("-PbaseConsumerMaven=" + repo_url)
         if os.name == "nt":
             command.insert(0, "cmd.exe")
             command.insert(1, "/c")

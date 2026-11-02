@@ -31,6 +31,11 @@ def main() -> None:
     parser.add_argument("--base-root", type=Path, required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--build-mode", choices=("reused-pinned-core", "full-source-build"), required=True)
+    parser.add_argument("--retained-core", type=Path,
+                        help="Directory containing verified retained-core release/debug provenance")
+    parser.add_argument("--release-tests-passed", action="store_true")
+    parser.add_argument("--debug-build-passed", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     base = args.base_root.resolve()
@@ -46,10 +51,30 @@ def main() -> None:
     simulation_clean, simulation_patch_sha = checkout_state(
         root, ["build", "adapters/wpilib-2026/build", "adapters/wpilib-2026/.gradle", "MecoBase-cpp"])
     base_clean, base_patch_sha = checkout_state(base, ["build", ".gradle"])
+    retained_core = None
+    core_build = None
+    if args.build_mode == "reused-pinned-core":
+        if args.retained_core is None:
+            raise ValueError("Reused-core provenance requires --retained-core")
+        retained_core = {
+            configuration: json.loads((args.retained_core / configuration / f"retained-core-{configuration.lower()}.json").read_text(encoding="utf-8"))
+            for configuration in ("Debug", "Release")
+        }
+    else:
+        if args.retained_core is not None:
+            raise ValueError("Full-source provenance cannot include retained-core records")
+        core_build = {
+            "mode": "full-source-build",
+            "sourceTrees": {path: output(["git", "rev-parse", f"HEAD:{path}"], root)
+                            for path in ("CMakeLists.txt", "include", "src", "tests")},
+            "releaseTestsPassed": args.release_tests_passed,
+            "debugBuildPassed": args.debug_build_passed,
+        }
     metadata = {
         "simulationCommit": os.environ.get("GITHUB_SHA", output(["git", "rev-parse", "HEAD"], root)),
         "baseCommit": base_commit,
         "baseVendordepVersion": descriptor["version"],
+        "buildMode": args.build_mode,
         "baseWorkingTreeClean": base_clean,
         "baseTrackedPatchSha256": base_patch_sha,
         "simulationWorkingTreeClean": simulation_clean,
@@ -64,6 +89,8 @@ def main() -> None:
             (dep.get("groupId", ""), dep.get("artifactId", ""), dep.get("version", ""))
             for dep in gradle_deps.get("cppDependencies", [])
         ),
+        "retainedCore": retained_core,
+        "coreBuild": core_build,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")

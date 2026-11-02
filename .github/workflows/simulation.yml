@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: Require a matching Base ref
         env:
-          SELECTED_BASE_REF: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.5' }}
+          SELECTED_BASE_REF: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.12' }}
         run: |
           if [[ -z "$SELECTED_BASE_REF" ]]; then
             echo "Set base_ref or MECO_BASE_REF to the compatible Base source ref" >&2
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: MECO-Robotics/MecoBase-cpp
-          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.5' }}
+          ref: ${{ inputs.base_ref || vars.MECO_BASE_REF || 'v2026.2.12' }}
           path: MecoBase-cpp
       - name: Pin selected Base ref to a commit
         id: pin
@@ -120,6 +120,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: MECO-Robotics/MecoBase-cpp
@@ -134,6 +136,22 @@ jobs:
           python-version: '3.12'
       - uses: ilammy/msvc-dev-cmd@7defe9254715b088f12dddd9942945a3d75cdad5 # v1.9.0
         if: runner.os == 'Windows'
+      - name: Locate LLVM archive tool on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $candidates = @(
+            (Get-Command llvm-ar.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source),
+            "$env:ProgramFiles\LLVM\bin\llvm-ar.exe",
+            "$env:ProgramFiles\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\bin\llvm-ar.exe",
+            "$env:ProgramFiles\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\bin\llvm-ar.exe"
+          ) | Where-Object { $_ -and (Test-Path $_) }
+          if (-not $candidates) {
+            choco install llvm --yes --no-progress
+            $candidates = @("$env:ProgramFiles\LLVM\bin\llvm-ar.exe") | Where-Object { Test-Path $_ }
+          }
+          if (-not $candidates) { throw 'llvm-ar is required to retain the verified Windows core archive members' }
+          "LLVM_AR=$($candidates[0])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Verify split Base integration
         run: python scripts/verify_base_compatibility.py --descriptor MecoBase-cpp/vendor/MecoBase.json --drive-header MecoBase-cpp/src/main/include/base/Drive.h
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -145,46 +163,18 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
-      - name: Install roboRIO toolchain for Base archives
-        if: runner.os == 'Linux'
-        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
-      - name: Build Base Linux desktop and roboRIO archives
-        if: runner.os == 'Linux'
-        run: |
-          for attempt in 1 2 3; do
-            if ./MecoBase-cpp/gradlew -p MecoBase-cpp \
-              frcBaseLinuxathenaDebugStaticLibrary \
-              frcBaseLinuxathenaReleaseStaticLibrary \
-              frcBaseLinuxx86-64DebugStaticLibrary \
-              frcBaseLinuxx86-64ReleaseStaticLibrary \
-              --max-workers=2; then
-              exit 0
-            fi
-            if [[ "$attempt" == 3 ]]; then exit 1; fi
-            sleep 15
-          done
-      - name: Build Base Windows desktop archives
-        if: runner.os == 'Windows'
-        shell: bash
-        run: >-
-          ./MecoBase-cpp/gradlew -p MecoBase-cpp
-          frcBaseWindowsx86-64DebugStaticLibrary
-          frcBaseWindowsx86-64ReleaseStaticLibrary
-          -Ptoolchain-optional-roboRio
-          --max-workers=2
       - name: Check benchmark report tooling
         run: python -m unittest discover -s scripts/tests
       - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
-      - name: Configure Release
-        run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
-      - name: Build and test Release
+      - name: Select the pinned core reuse or full-source build path
+        id: core_mode
+        shell: bash
         run: |
-          cmake --build build/Release --config Release --parallel 2
-          ctest --test-dir build/Release -C Release --output-on-failure
-      - name: Configure Debug
-        run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
-      - name: Build Debug
-        run: cmake --build build/Debug --config Debug --parallel 2
+          if python scripts/reuse_simulation_core.py --check-source; then
+            echo "mode=reused-pinned-core" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=full-source-build" >> "$GITHUB_OUTPUT"
+          fi
       - name: Verify pinned Base headers
         shell: bash
         run: |
@@ -196,37 +186,53 @@ jobs:
       - name: Build WPILib adapter Debug
         shell: bash
         run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=$GITHUB_WORKSPACE/MecoBase-cpp --max-workers=2
+      - name: Configure Release core
+        if: steps.core_mode.outputs.mode == 'full-source-build'
+        run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build and test Release core
+        if: steps.core_mode.outputs.mode == 'full-source-build'
+        run: |
+          cmake --build build/Release --config Release --parallel 2
+          ctest --test-dir build/Release -C Release --output-on-failure
+      - name: Configure Debug core
+        if: steps.core_mode.outputs.mode == 'full-source-build'
+        run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
+      - name: Build Debug core
+        if: steps.core_mode.outputs.mode == 'full-source-build'
+        run: cmake --build build/Debug --config Debug --parallel 2
       - name: Stage package libraries
         shell: bash
         run: |
           for configuration in Release Debug; do
-            mkdir -p "build/staged/${{ matrix.platform }}/$configuration/lib"
-            find "build/$configuration" -type f \( -name '*.a' -o -name '*.lib' \) -exec cp {} "build/staged/${{ matrix.platform }}/$configuration/lib/" \;
+            output="build/staged/${{ matrix.platform }}/$configuration/lib"
+            mkdir -p "$output"
+            lower="${configuration,,}"
+            adapter="$(find "adapters/wpilib-2026/build/libs/mecoSimAdapter/static/$lower" -type f \( -name 'libmecoSimAdapter.a' -o -name 'mecoSimAdapter.lib' \) -print -quit)"
+            test -n "$adapter"
+            if [[ "${{ steps.core_mode.outputs.mode }}" == "reused-pinned-core" ]]; then
+              python scripts/reuse_simulation_core.py \
+                --platform "${{ matrix.platform }}" \
+                --configuration "$configuration" \
+                --adapter-archive "$adapter" \
+                --output "$output" \
+                --work-dir "build/reuse-core/${{ matrix.platform }}/$configuration"
+            else
+              find "build/$configuration" -type f \( -name '*.a' -o -name '*.lib' \) -exec cp {} "$output/" \;
+              cp "$adapter" "$output/"
+            fi
           done
-          cp adapters/wpilib-2026/build/libs/mecoSimAdapter/static/release/* "build/staged/${{ matrix.platform }}/Release/lib/"
-          cp adapters/wpilib-2026/build/libs/mecoSimAdapter/static/debug/* "build/staged/${{ matrix.platform }}/Debug/lib/"
       - name: Record build provenance
-        run: python scripts/write_build_provenance.py --base-root MecoBase-cpp --platform ${{ matrix.platform }} --output build/staged/${{ matrix.platform }}/provenance.json
-      - name: Stage Base vendordep archives
         shell: bash
         run: |
-          if [[ "${{ matrix.platform }}" == "linuxx86-64" ]]; then
-            mkdir -p build/base-staged/linuxathena build/base-staged/linuxx86-64
-            cp -a MecoBase-cpp/build/libs/frcBase/static/linuxathena/. build/base-staged/linuxathena/
-            cp -a MecoBase-cpp/build/libs/frcBase/static/linuxx86-64/. build/base-staged/linuxx86-64/
+          if [[ "${{ steps.core_mode.outputs.mode }}" == "reused-pinned-core" ]]; then
+            python scripts/write_build_provenance.py --base-root MecoBase-cpp --platform "${{ matrix.platform }}" --build-mode reused-pinned-core --retained-core "build/staged/${{ matrix.platform }}" --output "build/staged/${{ matrix.platform }}/provenance.json"
           else
-            mkdir -p build/base-staged/windowsx86-64
-            cp -a MecoBase-cpp/build/libs/frcBase/static/windowsx86-64/. build/base-staged/windowsx86-64/
+            python scripts/write_build_provenance.py --base-root MecoBase-cpp --platform "${{ matrix.platform }}" --build-mode full-source-build --release-tests-passed --debug-build-passed --output "build/staged/${{ matrix.platform }}/provenance.json"
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: simulation-${{ matrix.platform }}
           path: build/staged/
-          if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: base-platform-${{ matrix.platform }}
-          path: build/base-staged/
           if-no-files-found: error
 
   package:
@@ -252,17 +258,10 @@ jobs:
       - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
       - name: Install LLVM library tool for merged Windows archive
         run: sudo apt-get update && sudo apt-get install -y llvm-18
-      - name: Install roboRIO toolchain for Base Maven packaging
-        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp installRoboRioToolchain
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: simulation-*
           path: build/artifacts/
-          merge-multiple: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: base-platform-*
-          path: build/base-artifacts/
           merge-multiple: false
       - name: Normalize artifact paths
         run: |
@@ -270,13 +269,10 @@ jobs:
           for platform in linuxx86-64 windowsx86-64; do
             cp -a "build/artifacts/simulation-$platform/$platform" build/staged/
           done
-          mkdir -p MecoBase-cpp/build/libs/frcBase/static
-          cp -a build/base-artifacts/base-platform-linuxx86-64/. MecoBase-cpp/build/libs/frcBase/static/
-          cp -a build/base-artifacts/base-platform-windowsx86-64/. MecoBase-cpp/build/libs/frcBase/static/
+      - name: Download and verify published matching Base Maven artifacts
+        run: python scripts/download_published_base.py --base-root MecoBase-cpp --version 2026.2.12 --output build/published-base
       - name: Assemble vendordep
         run: python scripts/package_vendordep.py --build-root build/staged --output build/vendor-maven
-      - name: Assemble matching split Base vendordep artifacts
-        run: ./MecoBase-cpp/gradlew -p MecoBase-cpp packageVendorMaven --max-workers=2
       - name: Verify package descriptor and artifacts
         run: python scripts/verify_vendordep.py --maven-root build/vendor-maven/maven
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -288,7 +284,7 @@ jobs:
         run: |
           mkdir -p build/vendor-maven-consumer
           cp -a build/vendor-maven/. build/vendor-maven-consumer/
-          python scripts/merge_base_maven.py --simulation-root build/vendor-maven-consumer --base-root MecoBase-cpp/build/vendor-maven
+          python scripts/merge_base_maven.py --simulation-root build/vendor-maven-consumer --base-root build/published-base
       - name: Verify combined Maven checksums and Simulation package
         run: python scripts/verify_vendordep.py --maven-root build/vendor-maven-consumer/maven --platform linuxx86-64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
