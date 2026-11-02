@@ -1,0 +1,287 @@
+{
+  "artifacts": {
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-headers.zip": "8c130d0cdce96a115f44c662caf1ecb1414ddea6f3775c4e4ae3abfbad5d0273",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-linuxx86-64static.zip": "8c8a3face60b532f4341ad1128cd63cc60634e9e1a7e6a97523b9e9b45a0a925",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-linuxx86-64staticdebug.zip": "6fd85ad390118856780a8a0d245d8ce9cd99be4cb7e6dc3e96809d20152b1963",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-sources.zip": "5ec61005bcaac09fddf56e410f87f7265d704cfdc75703cf00e92332404095a2",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-windowsx86-64static.zip": "a2b6cf9b1b7556c53f20747adc33dcc22d38e7981f04c62b6e12de407793427d",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10-windowsx86-64staticdebug.zip": "46195713e6b6f2e6bb7ed741e488fda68a6e2f7d02df9ff763e81a4985c7a82b",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.10/meco-simulation-wpilib-cpp-2026.0.10.pom": "eee40649a487083a6afc2229ac3200135b980d0ae1fa81ad6260672683cdf0c7",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-headers.zip": "76b07778ea2c4692f75684c94a156d30c4759e003431edf2a105d31fb5d3afa2",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-linuxx86-64static.zip": "3c4ef28840c65aeabc32595f14519f06fb689e5ee3072fcad8915a1f2f5420e0",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-linuxx86-64staticdebug.zip": "c51601673723000309f0ccf6dd3fe67335355a8eded5828630a5c274d143e2b9",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-sources.zip": "681369c26783e7afaac23cf5e6ee1199209e1c1ff8ae8e8e5d5357d18e6f901f",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-windowsx86-64static.zip": "f171c7b155ba147ae53af29568b2249de23a2163befa42ab555d84107b346cd8",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11-windowsx86-64staticdebug.zip": "44002c388e19e4ea0ae538624e653d3da6866ba299f7893369d9449b4f02ef64",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.11/meco-simulation-wpilib-cpp-2026.0.11.pom": "2ae17770a88fdbe3068ec719545789844130dcf9e1167a6520957d65bb2e29ce",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-headers.zip": "76b07778ea2c4692f75684c94a156d30c4759e003431edf2a105d31fb5d3afa2",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-linuxx86-64static.zip": "3c4ef28840c65aeabc32595f14519f06fb689e5ee3072fcad8915a1f2f5420e0",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-linuxx86-64staticdebug.zip": "c51601673723000309f0ccf6dd3fe67335355a8eded5828630a5c274d143e2b9",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-sources.zip": "d36b10b5cf77e2c6efd37e8255524410d388e2918089734d7efa5b4f1e377a3a",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-windowsx86-64static.zip": "63de8f09358e451e7b669e7b1dae84bf6299bb587cc326d479ecb1736edbaea7",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12-windowsx86-64staticdebug.zip": "1ce3ed10e2214e659615e5da7d16969525d9bb5d186bb692e22c742c1dff23f8",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.12/meco-simulation-wpilib-cpp-2026.0.12.pom": "f61e779a3ab03bbe97f0db7fab5d15200117e61a9222b14df5f9236e631c0f7d",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-headers.zip": "ec28295179805ddc5f568c06b6252540c2a76f2c059140a0aa54b4d96f68eb63",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-linuxx86-64static.zip": "3c4ef28840c65aeabc32595f14519f06fb689e5ee3072fcad8915a1f2f5420e0",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-linuxx86-64staticdebug.zip": "c51601673723000309f0ccf6dd3fe67335355a8eded5828630a5c274d143e2b9",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-sources.zip": "dcec2fa3b8e7ade50afa4a17a7adc20672a243ff3366add5bb3906070d2fd04d",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-windowsx86-64static.zip": "189ebec3034db1584a4efebd0de13e2525b6aa256b070ac53410990f68985da8",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13-windowsx86-64staticdebug.zip": "3542420ea2f9755f0a9b1e6dd19f3a0931ba812935c7f5f15fa4c59642f77c7c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.13/meco-simulation-wpilib-cpp-2026.0.13.pom": "deb4bdc4963f2e8c13a8433e560c4963f27424386ecf23679468a4e2de5dc999",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-headers.zip": "b6b7aa35db3fe97ae37bd2713cba4d029941e930bc1d722bff46cc18c657bb5c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-linuxx86-64static.zip": "dbb6617c8aba8773064fc20cf397eb4f509a514c2ad7753632f29c2e5d44a695",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-linuxx86-64staticdebug.zip": "f05b371b91314ba32435e8244bf32b5fc250d124a686da68649717ed9409984c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-sources.zip": "f02d98631e87f1ab3adde7ced2286a0f24a8aee812de964f6f40ba04400504c0",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-windowsx86-64static.zip": "a2993f5b761fb5be0dffdcbf82971c4ded0dd3fbd56686024923a51bfa885c1e",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14-windowsx86-64staticdebug.zip": "705c3b2209f73601d02ea50a6ae0eba49a5db644f6b81704d5ff6cd6c528d1f5",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.14/meco-simulation-wpilib-cpp-2026.0.14.pom": "c58a59be9d9b034c2b6c5b473257e7d901891deeee268617a1c53cd7f0cd3f68",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-headers.zip": "b88e97d6f196423567d49100bedb979714867d82588bf3709569eeab6bc3afa6",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-linuxx86-64static.zip": "dbb6617c8aba8773064fc20cf397eb4f509a514c2ad7753632f29c2e5d44a695",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-linuxx86-64staticdebug.zip": "f05b371b91314ba32435e8244bf32b5fc250d124a686da68649717ed9409984c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-sources.zip": "a0d3e2900db6229d66732a9bd9be13050262762cbc6f6d5a22cd40031e617ee5",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-windowsx86-64static.zip": "f17341d03cd08fab6a85357eb9be19afd6634ffa73b5413bb821e113f26b8e88",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15-windowsx86-64staticdebug.zip": "40fa7f1dc658c5ead5820b09cb9812faa01b309df36b5ed262afe76875b1d821",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.15/meco-simulation-wpilib-cpp-2026.0.15.pom": "14d1f30413a591e6b997185244f23c6fd6affb09b196e570dc2e0002160ff2a7",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-headers.zip": "3e5f72c8b2e87a31f71b33080322d5aeab8a578b42af8b9e8cf170acc794b6cd",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-linuxx86-64static.zip": "f7d533c8ff4283032532986c7755edc2f561c728aa49997dfb8e3e36367697f8",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-linuxx86-64staticdebug.zip": "b2cf443f551cccca3702e111a1f8200f2108965a78f556be5ebc8794a101f994",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-sources.zip": "046957d317e74db87b9e1ccaeb0414d1b261ae3becd946f71f5838093330c8fd",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-windowsx86-64static.zip": "6575de95fb4af9a941ce8c11de9ed815afe121866b12d42cedbb2e6d1e586fda",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16-windowsx86-64staticdebug.zip": "932557bf67dbe479f00221fc3827332f78b7e339a69a135cab5d27c4d6ffe49d",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.16/meco-simulation-wpilib-cpp-2026.0.16.pom": "c10920bb9ec3fd18f67a5bf28685ad8420806a8e479fd8061cce850e2d5604f5",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-headers.zip": "7b88f4947ce46ffde7bfcfab81ac01429c5a148d3f8a9a17e2fd21c6d4819abb",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-linuxx86-64static.zip": "e7eb23df232cbd888ba8c567b90ceddccbe39859b431d38ede9851b90e6ef7bb",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-linuxx86-64staticdebug.zip": "bbada67ca316ae52f1ed73fc9979aa28da9552b7b408208d4c639dab1d0e74be",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-sources.zip": "4ca66e53426e82a7ef5ee50ac76e2fde9c00bd0dfd8fe08b59a0d93b0581c13b",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-windowsx86-64static.zip": "2ed19d0bc0a104fe2cb3253f949d362a5bb215d7f44db7195f312fa77b20f473",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3-windowsx86-64staticdebug.zip": "fdefe92ce9b7521dbfc425997f2469ec3a9dd44fca9f75af5eeb5ce5eefa7e2f",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.3/meco-simulation-wpilib-cpp-2026.0.3.pom": "872bd4b514fda3ddc63555b225da581332c44c20a644e85032c120fdb20fe4c3",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-headers.zip": "7b88f4947ce46ffde7bfcfab81ac01429c5a148d3f8a9a17e2fd21c6d4819abb",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-linuxx86-64static.zip": "d1d81c7a7b5622adea88d3e1bb9a36e4a5fb3e7ff3955fbdeffcf22439d66f83",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-linuxx86-64staticdebug.zip": "a10dd1a2e6ad74f3ed4047097b0b4b889f6a7b4bcb91b3d67f22a1a746f8eeef",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-sources.zip": "f88f5ecd548501ec1d647c6ebe717c3a90aff0b5fb753451b170e2f480f4262f",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-windowsx86-64static.zip": "4b0c0d1085a27a5e989cca0ff73971d48ec610fabc15ecded61386a2b728d73f",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6-windowsx86-64staticdebug.zip": "ad1797779e873fb107adf3981eb81e3fb3d54d32ca7e575b2c4992fe835fd27a",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.6/meco-simulation-wpilib-cpp-2026.0.6.pom": "6c0ee32c1333739d6c0cfaaefb52934d0ec5a35121fcf6c87db5a19dec7f973c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-headers.zip": "95a12ae954b6a3eb88fe4f38d058e8fadf258438257f4cb520d59335f5b2262f",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-linuxx86-64static.zip": "4fa5cda5d315258df02b0e754fd111dcd20b273e8bd2625f9306015b21ebea63",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-linuxx86-64staticdebug.zip": "d2aa4782aac64f56e2ff0b31cf8ed34844ee8b1465f0b8f0273855c7e5cb88fd",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-sources.zip": "8123026bcc66b89214b6c46ee8e5ca8f8949f27d54f9ceac33ad9daddb0d17c7",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-windowsx86-64static.zip": "52bd5f8fa66620d8dc8247bc2b4648a6f57e31050bf12e784c51b35c518b2a7a",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7-windowsx86-64staticdebug.zip": "68d5d33ee084510a35ada1140630895fcb130409de3a481f29306fec3bbe7355",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.7/meco-simulation-wpilib-cpp-2026.0.7.pom": "6acb1568dbfb7632a7c12d1af529d32aa9458c5a801ef1cc4d6414a39c3fa98e",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-headers.zip": "ff194d497cdc139779da8f2b052f5efebd5b6bc7b2bfd1104d066858f5b472f4",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-linuxx86-64static.zip": "4fa5cda5d315258df02b0e754fd111dcd20b273e8bd2625f9306015b21ebea63",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-linuxx86-64staticdebug.zip": "d2aa4782aac64f56e2ff0b31cf8ed34844ee8b1465f0b8f0273855c7e5cb88fd",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-sources.zip": "0b92c7c9f09d25805283ce1d1f0955572bb9e3605537069e815529dd4a021984",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-windowsx86-64static.zip": "17b652bcf2bc90023bb1473bc3a9f24986245bf5e8809e26aac8ea9f475b3b5e",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8-windowsx86-64staticdebug.zip": "aa01423ee2efac52712a650120776566fc585fd9c49e5c1844867818ba67472c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.8/meco-simulation-wpilib-cpp-2026.0.8.pom": "1d94a1367e7a37e4f501d1148b2d43aeff5f4c21dec44ad4951290fd514f2823",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-headers.zip": "800c2b0d271ce16f718fe8a0f8b4a19f0a353117663aaf55755250bd3c36126c",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-linuxx86-64static.zip": "61cda62f69d8a66950b8e2ba8d068cb0fe8105cccadeb499e6477951da586ace",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-linuxx86-64staticdebug.zip": "5ae0cc716b8e77059666262ba48f728151d2eec40fd9b943a4d6bb9db5e458ad",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-sources.zip": "e3d6494412f41fca6dc4c8ba90819db68965eca5f21661d47308c59a4bb8ebc7",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-windowsx86-64static.zip": "2be420f0ba62fe55450207d1ea25428fad684bf80044d2311e20e569756ff74a",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9-windowsx86-64staticdebug.zip": "0cc21ac2da501f1a9c83ea7e467119f3c556397e7b959dc4f9a1683ec8578e25",
+    "maven/com/mecorobotics/sim/meco-simulation-wpilib-cpp/2026.0.9/meco-simulation-wpilib-cpp-2026.0.9.pom": "06addb108d5c04abe3a1a783ccfe3b62045774eafa0a3ee88dfa362df6ba3eda"
+  },
+  "buildProvenance": {
+    "linuxx86-64": {
+      "baseCommit": "18c412b79b3fd3c7818579645e0bcfaa1701f19c",
+      "baseTrackedPatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseVendordepVersion": "2026.2.5",
+      "baseWorkingTreeClean": true,
+      "cmakeVersion": "cmake version 3.30.5",
+      "gradleRioVersion": "2026.2.1",
+      "gradleVersion": "8.11",
+      "javaRuntime": "openjdk version \"17.0.21\" 2026-10-20",
+      "platform": "linuxx86-64",
+      "simulationCommit": "0d3f527be9a5a27c35ff879b02d5bc1ad9477daf",
+      "simulationTrackedPatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "simulationWorkingTreeClean": true,
+      "vendorDependencies": [
+        [
+          "com.ctre.phoenix6",
+          "tools",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6",
+          "wpiapi-cpp",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simPigeonIMU",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANcoder",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANdi",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANdle",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANrange",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProPigeon2",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProTalonFX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProTalonFXS",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simTalonSRX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simVictorSPX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "tools-sim",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "wpiapi-cpp-sim",
+          "26.1.2"
+        ],
+        [
+          "com.pathplanner.lib",
+          "PathplannerLib-cpp",
+          "2026.1.2"
+        ],
+        [
+          "edu.wpi.first.wpilibNewCommands",
+          "wpilibNewCommands-cpp",
+          "wpilib"
+        ]
+      ],
+      "wpilibYear": "2026"
+    },
+    "windowsx86-64": {
+      "baseCommit": "18c412b79b3fd3c7818579645e0bcfaa1701f19c",
+      "baseTrackedPatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseVendordepVersion": "2026.2.5",
+      "baseWorkingTreeClean": true,
+      "cmakeVersion": "cmake version 3.30.5",
+      "gradleRioVersion": "2026.2.1",
+      "gradleVersion": "8.11",
+      "javaRuntime": "openjdk version \"17.0.20.1\" 2026-08-18",
+      "platform": "windowsx86-64",
+      "simulationCommit": "0d3f527be9a5a27c35ff879b02d5bc1ad9477daf",
+      "simulationTrackedPatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "simulationWorkingTreeClean": true,
+      "vendorDependencies": [
+        [
+          "com.ctre.phoenix6",
+          "tools",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6",
+          "wpiapi-cpp",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simPigeonIMU",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANcoder",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANdi",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANdle",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProCANrange",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProPigeon2",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProTalonFX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simProTalonFXS",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simTalonSRX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "simVictorSPX",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "tools-sim",
+          "26.1.2"
+        ],
+        [
+          "com.ctre.phoenix6.sim",
+          "wpiapi-cpp-sim",
+          "26.1.2"
+        ],
+        [
+          "com.pathplanner.lib",
+          "PathplannerLib-cpp",
+          "2026.1.2"
+        ],
+        [
+          "edu.wpi.first.wpilibNewCommands",
+          "wpilibNewCommands-cpp",
+          "wpilib"
+        ]
+      ],
+      "wpilibYear": "2026"
+    }
+  },
+  "cmakeVersion": "cmake version 3.30.5",
+  "sourceCommit": "0d3f527be9a5a27c35ff879b02d5bc1ad9477daf",
+  "version": "2026.0.16"
+}

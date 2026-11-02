@@ -5,6 +5,10 @@ import json
 import re
 import subprocess
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from reuse_simulation_core import verify_retained_core_provenance
 
 REQUIRED_JOBS = {
     'resolve-base', 'base-vendor-cache', 'build (ubuntu-24.04, linuxx86-64)',
@@ -31,12 +35,31 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
     provenance = manifest.get('buildProvenance', {})
     if set(provenance) != {'linuxx86-64', 'windowsx86-64'}:
         raise ValueError('Package does not contain both platform builds')
+    modes = {item.get('buildMode') for item in provenance.values()}
+    if len(modes) != 1 or not modes <= {'reused-pinned-core', 'full-source-build'}:
+        raise ValueError('Package does not contain one explicit supported core build mode')
     base_commits = set()
-    for item in provenance.values():
+    for platform, item in provenance.items():
         if (item.get('simulationCommit') != source or not item.get('simulationWorkingTreeClean')
                 or not item.get('baseWorkingTreeClean') or item.get('baseVendordepVersion') != '2026.2.12'):
             raise ValueError('Package provenance is not a clean tested build')
         base_commits.add(item.get('baseCommit'))
+        if item['buildMode'] == 'reused-pinned-core':
+            verify_retained_core_provenance(platform, item.get('retainedCore', {}))
+            if item.get('coreBuild') is not None:
+                raise ValueError('Reused-core provenance cannot claim a fresh CMake core build')
+        else:
+            core_build = item.get('coreBuild') or {}
+            expected_trees = {
+                path: subprocess.check_output(['git', 'rev-parse', f'HEAD:{path}'], text=True).strip()
+                for path in ('CMakeLists.txt', 'include', 'src')
+            }
+            if (core_build.get('mode') != 'full-source-build'
+                    or core_build.get('releaseTestsPassed') is not True
+                    or core_build.get('debugBuildPassed') is not True
+                    or item.get('retainedCore') is not None
+                    or core_build.get('sourceTrees') != expected_trees):
+                raise ValueError(f'{platform} full-source build provenance is incomplete')
     if base_commits != {base_commit}:
         raise ValueError('Platform builds do not use the pinned Base revision')
 

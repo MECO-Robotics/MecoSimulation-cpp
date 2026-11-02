@@ -1,0 +1,24 @@
+{
+  "version": "2026.0.16",
+  "sourceTag": "v2026.0.16",
+  "tagCommit": "e9b6ef3ebfbf30696e5266494aaff83b4ef025e7",
+  "sourceCommit": "0d3f527be9a5a27c35ff879b02d5bc1ad9477daf",
+  "coreSourceTrees": {
+    "CMakeLists.txt": "241c58400f0f05caa7a1f18279667a3fc1f639b9",
+    "include": "18587e58d8ac39694ea9dbdafabb1c552566beee",
+    "src": "b24f4ee8e87906c865243faedf506dcd5e6c1664"
+  },
+  "baseVendordepVersion": "2026.2.5",
+  "baseCommit": "18c412b79b3fd3c7818579645e0bcfaa1701f19c",
+  "manifestSha256": "eea421aba3c96cbb3d0776c0f9b05b231070b0cfd695473c8e19bff5d2281ddb",
+  "archives": {
+    "linuxx86-64": {
+      "Release": "f7d533c8ff4283032532986c7755edc2f561c728aa49997dfb8e3e36367697f8",
+      "Debug": "b2cf443f551cccca3702e111a1f8200f2108965a78f556be5ebc8794a101f994"
+    },
+    "windowsx86-64": {
+      "Release": "6575de95fb4af9a941ce8c11de9ed815afe121866b12d42cedbb2e6d1e586fda",
+      "Debug": "932557bf67dbe479f00221fc3827332f78b7e339a69a135cab5d27c4d6ffe49d"
+    }
+  }
+}
