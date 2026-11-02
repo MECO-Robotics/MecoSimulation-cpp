@@ -57,7 +57,7 @@ class TestedReleaseTest(unittest.TestCase):
         self.manifest = copy.deepcopy(self.manifest)
         root = Path(__file__).resolve().parents[3]
         trees = {path: subprocess.check_output(['git', 'rev-parse', f'HEAD:{path}'], cwd=root, text=True).strip()
-                 for path in ('CMakeLists.txt', 'include', 'src')}
+                 for path in ('CMakeLists.txt', 'include', 'src', 'tests')}
         for item in self.manifest['buildProvenance'].values():
             item['buildMode'] = 'full-source-build'
             item['retainedCore'] = None

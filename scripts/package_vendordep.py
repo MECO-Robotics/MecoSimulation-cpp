@@ -59,7 +59,7 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
                 current_trees = {
                     path: subprocess.run(["git", "rev-parse", f"{source_commit}:{path}"], cwd=root,
                                          text=True, capture_output=True, check=True).stdout.strip()
-                    for path in ("CMakeLists.txt", "include", "src")
+                    for path in ("CMakeLists.txt", "include", "src", "tests")
                 }
                 if core_build.get("sourceTrees") != current_trees:
                     raise ValueError(f"{platform} full-source core tree provenance differs from package source")

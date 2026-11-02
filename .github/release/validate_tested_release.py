@@ -52,7 +52,7 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
             core_build = item.get('coreBuild') or {}
             expected_trees = {
                 path: subprocess.check_output(['git', 'rev-parse', f'HEAD:{path}'], text=True).strip()
-                for path in ('CMakeLists.txt', 'include', 'src')
+                for path in ('CMakeLists.txt', 'include', 'src', 'tests')
             }
             if (core_build.get('mode') != 'full-source-build'
                     or core_build.get('releaseTestsPassed') is not True

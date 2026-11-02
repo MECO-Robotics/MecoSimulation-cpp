@@ -67,8 +67,8 @@ adapter objects against the selected Base headers, checks every retained core
 object against the pinned release archive, and uses the published matching
 Base Maven artifacts when assembling a temporary consumer repository. It links
 Linux and Windows Debug and Release consumers before its optional GitHub Pages
-publish job. It skips rebuilding CMake/include/src only when their trees exactly
-match the pinned v2026.0.16 release; consumer links still validate the new
+publish job. It skips rebuilding CMake/include/src/tests only when their trees
+exactly match the pinned v2026.0.16 release; consumer links still validate the new
 adapter with the selected Base. If those core trees change, CI runs the full
 Release test and Debug build path and records that source-build provenance. The selected Base ref
 must contain the matching 2026.2.12 native AutoDrive/perception API for this

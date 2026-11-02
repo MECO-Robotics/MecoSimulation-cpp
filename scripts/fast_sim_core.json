@@ -6,7 +6,8 @@
   "coreSourceTrees": {
     "CMakeLists.txt": "241c58400f0f05caa7a1f18279667a3fc1f639b9",
     "include": "18587e58d8ac39694ea9dbdafabb1c552566beee",
-    "src": "b24f4ee8e87906c865243faedf506dcd5e6c1664"
+    "src": "b24f4ee8e87906c865243faedf506dcd5e6c1664",
+    "tests": "40956ae4e69cf1173e64023e3b0e7d2f141b07e0"
   },
   "baseVendordepVersion": "2026.2.5",
   "baseCommit": "18c412b79b3fd3c7818579645e0bcfaa1701f19c",

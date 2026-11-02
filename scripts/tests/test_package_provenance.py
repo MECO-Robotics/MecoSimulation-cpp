@@ -48,7 +48,7 @@ class PackageProvenanceTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
         trees = {path: subprocess.check_output(["git", "rev-parse", f"HEAD:{path}"], cwd=root, text=True).strip()
-                 for path in ("CMakeLists.txt", "include", "src")}
+                 for path in ("CMakeLists.txt", "include", "src", "tests")}
         record = {
             "baseVendordepVersion": "2026.2.12",
             "baseCommit": "base",

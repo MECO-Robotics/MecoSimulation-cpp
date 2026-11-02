@@ -66,7 +66,7 @@ def main() -> None:
         core_build = {
             "mode": "full-source-build",
             "sourceTrees": {path: output(["git", "rev-parse", f"HEAD:{path}"], root)
-                            for path in ("CMakeLists.txt", "include", "src")},
+                            for path in ("CMakeLists.txt", "include", "src", "tests")},
             "releaseTestsPassed": args.release_tests_passed,
             "debugBuildPassed": args.debug_build_passed,
         }
