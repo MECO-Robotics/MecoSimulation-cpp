@@ -72,7 +72,6 @@ jobs:
         configuration: [Debug, Release]
         base:
           - {ref: v2026.2.12, version: '2026.2.12'}
-          - {ref: v2026.2.10, version: '2026.2.10'}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 3
     steps:
