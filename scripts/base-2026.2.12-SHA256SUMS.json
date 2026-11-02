@@ -1,0 +1,17 @@
+{
+  "artifacts": {
+    "LICENSE.md": "6ea843d9f221a2a7cb757d65c86368b9f207584ed0f2653e4b215a7702a7e1c7",
+    "MecoBase.json": "4ae4c12135e7e4cfde5997a5fa1c0077c75d6b882db9ff9fd1a3f0c73dba3c25",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-headers.zip": "bd1f6ac9f13ae14e8667ac26023d01b219f67dcbdc62768fdbedfb13fb07f967",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-linuxathenastatic.zip": "35892e0c24fe3b73358afff05fcb72c177f73879843aff74c9b3286a6d3c9eee",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-linuxathenastaticdebug.zip": "5a13a6f6b788fddf0c584056e2d834ca98d5c9d39519b802a25e91d391e41bf9",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-linuxx86-64static.zip": "8583b848c09b64d2f85adb4172e55f5eb228be43db742f568843c3183d138587",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-linuxx86-64staticdebug.zip": "3abc61ddc3b29d2f72194420fe4d34039f9141a87aec958cff223895dcf20f1b",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-sources.zip": "9d39ea4b0faac87050d7865eb8b1ca9f8f5769dcb63293550ff0dbe3c4b16525",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-windowsx86-64static.zip": "0297bf94ba8823d43a660723b2e1da63e5a3099f51db622fe36c191d28869abb",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12-windowsx86-64staticdebug.zip": "1f0c0e392f70ea4cda344276cfaee7496d6924a1dd62ee9e75c3747a139cc3b2",
+    "maven/com/mecorobotics/frc/meco-base-cpp/2026.2.12/meco-base-cpp-2026.2.12.pom": "91a79639e657bd8571fd34e17d6e22e6f7e3e9feeef6990402086195b8805480"
+  },
+  "descriptorVersion": "2026.2.12",
+  "sourceCommit": "660eb3112d2edecb2d34efc5f0e19a75110212f1"
+}

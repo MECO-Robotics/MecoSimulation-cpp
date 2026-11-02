@@ -346,3 +346,9 @@ resolves spherical particles against those boxes; use short simulation
 substeps because contact detection is discrete. Field boundaries, ramps,
 trench structures, tower and depot geometry are simplified, not a complete
 representation of the official field.
+
+The Base 2026.2.12 checksum snapshot in `scripts/base-2026.2.12-SHA256SUMS.json`
+is pinned to release source `660eb31` and the assembled artifact from
+[release run 41534819397](https://github.com/MECO-Robotics/MecoBase-cpp/actions/runs/41534819397).
+The downloader checks this snapshot and every immutable Maven coordinate, so a
+later Base release changing the site root cannot change this build.
