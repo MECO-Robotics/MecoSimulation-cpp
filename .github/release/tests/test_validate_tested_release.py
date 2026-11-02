@@ -13,10 +13,10 @@ class TestedReleaseTest(unittest.TestCase):
         self.commit = {'sha': 'built', 'parents': [{'sha': 'base'}, {'sha': 'head'}], 'tree': {'sha': 'tree'}}
         self.tag = {'parents': [{'sha': 'base'}, {'sha': 'head'}], 'tree': {'sha': 'tree'}}
         self.item = {'simulationCommit': 'built', 'simulationWorkingTreeClean': True,
-                     'baseWorkingTreeClean': True, 'baseVendordepVersion': '2026.2.5', 'baseCommit': 'pinned'}
-        self.manifest = {'sourceCommit': 'built', 'version': '2026.0.16',
+                     'baseWorkingTreeClean': True, 'baseVendordepVersion': '2026.2.12', 'baseCommit': 'pinned'}
+        self.manifest = {'sourceCommit': 'built', 'version': '2026.0.17',
                          'buildProvenance': {'linuxx86-64': self.item, 'windowsx86-64': self.item}}
-        self.descriptor = {'version': '2026.0.16'}
+        self.descriptor = {'version': '2026.0.17'}
 
     def check(self):
         validate(self.run, self.jobs, self.manifest, self.tag, self.commit,

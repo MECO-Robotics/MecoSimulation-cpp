@@ -34,7 +34,7 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
     base_commits = set()
     for item in provenance.values():
         if (item.get('simulationCommit') != source or not item.get('simulationWorkingTreeClean')
-                or not item.get('baseWorkingTreeClean') or item.get('baseVendordepVersion') != '2026.2.5'):
+                or not item.get('baseWorkingTreeClean') or item.get('baseVendordepVersion') != '2026.2.12'):
             raise ValueError('Package provenance is not a clean tested build')
         base_commits.add(item.get('baseCommit'))
     if base_commits != {base_commit}:
@@ -65,7 +65,7 @@ def main():
     jobs = api(f'{repo}/actions/runs/{args.run_id}/jobs?filter=latest&per_page=100')['jobs']
     tag_commit = api(f'{repo}/git/commits/{tag_sha}')
     built_commit = api(f"{repo}/git/commits/{manifest['sourceCommit']}")
-    base_commit = api('repos/MECO-Robotics/MecoBase-cpp/commits/v2026.2.5')['sha']
+    base_commit = api('repos/MECO-Robotics/MecoBase-cpp/commits/v2026.2.12')['sha']
     validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_descriptor, base_commit)
     print(f"Validated run {args.run_id}, package {manifest['version']} and tag {tag_sha}")
 

@@ -48,8 +48,10 @@ configuration, and known limits.
 ## Install in a robot project
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. The current package requires Base 2026.2.5 and Simulation
-2026.0.16. Configure each module's physical drive, steer, and encoder mounting
+2026.0.10. The current package requires Base 2026.2.12 and Simulation
+2026.0.17. This pair rebuilds the adapter for the configurable control-timing
+and CAN-rate APIs; use these matching packages together rather than mixing the
+new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. The release workflow publishes matching Base Maven artifacts alongside
@@ -63,7 +65,7 @@ The release workflow builds both desktop platforms, builds matching split Base
 archives on Linux, roboRIO, and Windows, and merges both vendordeps into a
 temporary Maven repository. It links Linux and Windows Debug and Release
 consumers before its optional GitHub Pages publish job. The selected Base ref
-must contain the matching 2026.2.5 native AutoDrive/perception API for this
+must contain the matching 2026.2.12 native AutoDrive/perception API for this
 development package. Set `MECO_BASE_REF` or the explicit `base_ref` input; there
 is no fallback to an older incompatible release. The workflow resolves that ref once
 and uses the same commit for each build, packaging, and consumer job. Publishing
