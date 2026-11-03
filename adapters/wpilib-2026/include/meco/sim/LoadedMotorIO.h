@@ -21,12 +21,16 @@ struct LoadedMotorModel
     double loadDirectionSpeedThresholdRadPerSecond{0.01};
 };
 
-// Creates a simulated MotorIO whose load torque is sampled dynamically on
+// Adds a base::MakeMotorIO overload for a simulated motor whose load torque is sampled dynamically on
 // each robot-period integration step. The callback returns an opposing load
 // magnitude in N m at the output shaft; negative values are treated as zero.
 // The caller owns the captured load state and must keep it alive as long as
 // the returned IO. Must be constructed in desktop simulation.
-std::unique_ptr<base::MotorIO> MakeMotorIO(
-    const base::MotorConfig &motor, LoadedMotorModel model,
-    std::function<double()> loadTorqueNm);
 } // namespace meco::sim
+
+namespace base
+{
+std::unique_ptr<MotorIO> MakeMotorIO(const MotorConfig &motor,
+                                     meco::sim::LoadedMotorModel model,
+                                     std::function<double()> loadTorqueNm);
+} // namespace base
