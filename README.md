@@ -49,7 +49,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.12 and Simulation
-2026.0.17. This pair rebuilds the adapter for the configurable control-timing
+2026.0.18. This pair rebuilds the adapter for the configurable control-timing
 and CAN-rate APIs; use these matching packages together rather than mixing the
 new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
@@ -62,7 +62,7 @@ Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 
 The release workflow verifies the immutable 2026.0.16 release archives and
-reuses only their unchanged Jolt/core objects. It rebuilds the three WPILib
+reuses only their unchanged Jolt/core objects. It rebuilds the four WPILib
 adapter objects against the selected Base headers, checks every retained core
 object against the pinned release archive, and uses the published matching
 Base Maven artifacts when assembling a temporary consumer repository. It links

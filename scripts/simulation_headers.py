@@ -22,6 +22,7 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/ParticleFieldContacts.h",
     "meco/sim/SimulatedPieceSensor.h",
     "meco/sim/PracticeMatchController.h",
+    "meco/sim/LoadedMotorIO.h",
     "meco/sim/SimulationDiagnostics.h",
     "base/sim/fields/Rebuilt2026.h",
 }
