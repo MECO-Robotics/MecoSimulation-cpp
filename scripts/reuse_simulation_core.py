@@ -21,6 +21,11 @@ ADAPTER_OBJECTS = {
     "PracticeMatchController",
     "LoadedMotorIO",
 }
+PINNED_ADAPTER_OBJECTS = {
+    "DriveSimulationAdapter",
+    "DriveHardwareSimulation",
+    "PracticeMatchController",
+}
 FRC_JOLT_OBJECTS = {
     "SimulationWorld", "RobotContactConfig", "DrivePhysics", "Arena", "Rebuilt2026"
 }
@@ -243,13 +248,13 @@ def main() -> None:
     if set(adapter_by_stem) != ADAPTER_OBJECTS:
         raise ValueError(f"Fresh adapter archive must contain exactly {sorted(ADAPTER_OBJECTS)}, got {sorted(adapter_by_stem)}")
     old_members = list(old_entries)
-    old_adapter = [name for name in old_members if member_stem(name) in ADAPTER_OBJECTS]
-    if {member_stem(name) for name in old_adapter} != ADAPTER_OBJECTS:
-        raise ValueError("Retained archive does not contain exactly the four replaceable adapter objects")
+    old_adapter = [name for name in old_members if member_stem(name) in PINNED_ADAPTER_OBJECTS]
+    if {member_stem(name) for name in old_adapter} != PINNED_ADAPTER_OBJECTS:
+        raise ValueError("Retained archive does not contain the complete pinned adapter object set")
     if {member_stem(name) for name in old_members if member_stem(name) in FRC_JOLT_OBJECTS} != FRC_JOLT_OBJECTS:
         raise ValueError("Retained archive does not contain the complete pinned frc_jolt object set")
-    if {member_stem(name) for name in adapter_entries} != {member_stem(name) for name in old_adapter}:
-        raise ValueError("Fresh and retained adapter object names do not match")
+    if not PINNED_ADAPTER_OBJECTS.issubset(adapter_by_stem):
+        raise ValueError("Fresh adapter archive is missing an existing replaceable adapter object")
 
     fresh_adapter_dir = args.work_dir / "fresh-adapter-objects"
     fresh_adapter_dir.mkdir()
