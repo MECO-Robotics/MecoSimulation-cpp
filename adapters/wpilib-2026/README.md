@@ -15,7 +15,7 @@ auxiliary load. No discharge curve, regeneration, branch wiring losses, breaker
 thermal behavior or automatic brownout-output behavior is added by this helper.
 The runtime still defaults to fixed 12 V unless the application calls the helper.
 
-`meco/sim/LoadedMotorIO.h` provides `CreateLoadedMotorIO` for mechanisms whose
+`meco/sim/LoadedMotorIO.h` adds a `meco::sim::MakeMotorIO` overload for mechanisms whose
 simulated motor needs a changing output load. Supply one motor's SI resistance,
 torque constant, and speed constant in `LoadedMotorModel`, plus a callback that
 returns the current opposing output torque in N m. The callback is sampled once

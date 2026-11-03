@@ -107,9 +107,9 @@ class LoadedMotor final : public base::MotorIO
 };
 } // namespace
 
-std::unique_ptr<base::MotorIO> CreateLoadedMotorIO(const base::MotorConfig &motor,
-                                                    LoadedMotorModel model,
-                                                    std::function<double()> loadTorqueNm)
+std::unique_ptr<base::MotorIO> MakeMotorIO(const base::MotorConfig &motor,
+                                           LoadedMotorModel model,
+                                           std::function<double()> loadTorqueNm)
 {
     return std::make_unique<LoadedMotor>(motor, model, std::move(loadTorqueNm));
 }

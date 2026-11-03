@@ -26,7 +26,7 @@ struct LoadedMotorModel
 // magnitude in N m at the output shaft; negative values are treated as zero.
 // The caller owns the captured load state and must keep it alive as long as
 // the returned IO. Must be constructed in desktop simulation.
-std::unique_ptr<base::MotorIO> CreateLoadedMotorIO(
+std::unique_ptr<base::MotorIO> MakeMotorIO(
     const base::MotorConfig &motor, LoadedMotorModel model,
     std::function<double()> loadTorqueNm);
 } // namespace meco::sim
