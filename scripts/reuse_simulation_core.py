@@ -15,7 +15,12 @@ import urllib.request
 import zipfile
 
 SITE = "https://meco-robotics.github.io/MecoSimulation-cpp"
-ADAPTER_OBJECTS = {"DriveSimulationAdapter", "DriveHardwareSimulation", "PracticeMatchController"}
+ADAPTER_OBJECTS = {
+    "DriveSimulationAdapter",
+    "DriveHardwareSimulation",
+    "PracticeMatchController",
+    "LoadedMotorIO",
+}
 FRC_JOLT_OBJECTS = {
     "SimulationWorld", "RobotContactConfig", "DrivePhysics", "Arena", "Rebuilt2026"
 }
@@ -240,7 +245,7 @@ def main() -> None:
     old_members = list(old_entries)
     old_adapter = [name for name in old_members if member_stem(name) in ADAPTER_OBJECTS]
     if {member_stem(name) for name in old_adapter} != ADAPTER_OBJECTS:
-        raise ValueError("Retained archive does not contain exactly the three replaceable adapter objects")
+        raise ValueError("Retained archive does not contain exactly the four replaceable adapter objects")
     if {member_stem(name) for name in old_members if member_stem(name) in FRC_JOLT_OBJECTS} != FRC_JOLT_OBJECTS:
         raise ValueError("Retained archive does not contain the complete pinned frc_jolt object set")
     if {member_stem(name) for name in adapter_entries} != {member_stem(name) for name in old_adapter}:
