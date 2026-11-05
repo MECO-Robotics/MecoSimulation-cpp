@@ -122,6 +122,7 @@ model {
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/LoadedMotorIO.h>
 #include <meco/sim/SimulationPower.h>
+#include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulatedVision.h>
 #include <meco/sim/SimulatedVisionSource.h>
@@ -156,6 +157,7 @@ class Gyro final : public base::SwerveGyroIO {
 
 int main() {
   using namespace units::literals;
+  meco::sim::ConfigureSimulationNetwork();
   const auto motor = meco::sim::LoadedMotorModelFromStallAndFreeSpeed(12, 120, 3, 6000);
   if (std::abs(motor.resistanceOhms - .1) > 1e-12 ||
       std::abs(motor.torqueConstantNmPerAmp - .025) > 1e-12) return 48;

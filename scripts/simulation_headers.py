@@ -16,6 +16,7 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/DriveSimulationAdapter.h",
     "meco/sim/BatterySupply.h",
     "meco/sim/SimulationPower.h",
+    "meco/sim/SimulationNetwork.h",
     "meco/sim/SimulationPose.h",
     "meco/sim/SimulatedVision.h",
     "meco/sim/SimulatedVisionSource.h",
