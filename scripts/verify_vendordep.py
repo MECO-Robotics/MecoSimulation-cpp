@@ -10,6 +10,7 @@ from pathlib import Path
 import zipfile
 
 from simulation_headers import validate_simulation_header_names
+from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
 VERSION = "2026.0.21"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
@@ -77,6 +78,13 @@ def main() -> None:
     if not args.platform and (set(provenance) != set(CLASSIFIERS) or
                               any(item.get("baseVendordepVersion") != "2026.2.12" for item in provenance.values())):
         raise SystemExit("Full package lacks both platform builds or split Base provenance")
+    for platform, item in provenance.items():
+        if item.get("buildMode") == "reused-published-binary":
+            verify_reused_binary(platform, item)
+            for configuration, suffix in (("Release", "static"), ("Debug", "staticdebug")):
+                path = artifact_dir / f"meco-simulation-wpilib-cpp-{VERSION}-{platform}{suffix}.zip"
+                if platform in platforms and hashlib.sha256(path.read_bytes()).hexdigest() != ARCHIVES[platform][configuration]:
+                    raise SystemExit(f"Reused binary digest mismatch: {path}")
     print(f"Verified {len(required)} Maven files for {VERSION}")
 
 

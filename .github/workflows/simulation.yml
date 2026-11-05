@@ -118,6 +118,7 @@ jobs:
           - os: windows-2022
             platform: windowsx86-64
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -163,10 +164,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: echo "FRC_VENDOR_CACHE=$(cygpath -m "$(pwd)/MecoBase-cpp/build/vendor-cache")" >> "$GITHUB_ENV"
+      - name: Check published binary reuse eligibility
+        id: binary_reuse
+        shell: bash
+        run: |
+          if python scripts/reuse_published_binary.py --check-source; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Check benchmark report tooling
         run: python -m unittest discover -s scripts/tests
       - uses: lukka/get-cmake@b516803a3c5fac40e2e922349d15cdebdba01e60 # v3.30.5
+        if: steps.binary_reuse.outputs.enabled != 'true'
       - name: Select the pinned core reuse or full-source build path
+        if: steps.binary_reuse.outputs.enabled != 'true'
         id: core_mode
         shell: bash
         run: |
@@ -181,26 +193,33 @@ jobs:
           test -f MecoBase-cpp/src/main/include/base/Drive.h
           test -f MecoBase-cpp/src/main/include/base/SimulationRuntime.h
       - name: Build WPILib adapter Release
+        if: steps.binary_reuse.outputs.enabled != 'true'
         shell: bash
         run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterReleaseStaticLibrary -PmecoBaseRoot=$GITHUB_WORKSPACE/MecoBase-cpp --max-workers=2
       - name: Build WPILib adapter Debug
+        if: steps.binary_reuse.outputs.enabled != 'true'
         shell: bash
         run: ./adapters/wpilib-2026/gradlew -p adapters/wpilib-2026 mecoSimAdapterDebugStaticLibrary -PmecoBaseRoot=$GITHUB_WORKSPACE/MecoBase-cpp --max-workers=2
       - name: Configure Release core
-        if: steps.core_mode.outputs.mode == 'full-source-build'
+        if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
         run: cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
       - name: Build and test Release core
-        if: steps.core_mode.outputs.mode == 'full-source-build'
+        if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
         run: |
           cmake --build build/Release --config Release --parallel 2
           ctest --test-dir build/Release -C Release --output-on-failure
       - name: Configure Debug core
-        if: steps.core_mode.outputs.mode == 'full-source-build'
+        if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
         run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
       - name: Build Debug core
-        if: steps.core_mode.outputs.mode == 'full-source-build'
+        if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
         run: cmake --build build/Debug --config Debug --parallel 2
+      - name: Stage verified published binaries
+        if: steps.binary_reuse.outputs.enabled == 'true'
+        shell: bash
+        run: python scripts/reuse_published_binary.py --platform "${{ matrix.platform }}" --base-root MecoBase-cpp --output "build/staged/${{ matrix.platform }}"
       - name: Stage package libraries
+        if: steps.binary_reuse.outputs.enabled != 'true'
         shell: bash
         run: |
           for configuration in Release Debug; do
@@ -222,6 +241,7 @@ jobs:
             fi
           done
       - name: Record build provenance
+        if: steps.binary_reuse.outputs.enabled != 'true'
         shell: bash
         run: |
           if [[ "${{ steps.core_mode.outputs.mode }}" == "reused-pinned-core" ]]; then
@@ -312,6 +332,7 @@ jobs:
             target: desktop
             configuration: Release
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -406,6 +427,7 @@ jobs:
           - os: windows-2022
             configuration: Release
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -445,6 +467,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
         configuration: [Debug, Release]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

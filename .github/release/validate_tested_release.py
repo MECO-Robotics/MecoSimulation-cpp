@@ -9,6 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from reuse_simulation_core import verify_retained_core_provenance
+from reuse_published_binary import verify_provenance as verify_reused_binary
 
 REQUIRED_JOBS = {
     'resolve-base', 'base-vendor-cache', 'build (ubuntu-24.04, linuxx86-64)',
@@ -36,7 +37,7 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
     if set(provenance) != {'linuxx86-64', 'windowsx86-64'}:
         raise ValueError('Package does not contain both platform builds')
     modes = {item.get('buildMode') for item in provenance.values()}
-    if len(modes) != 1 or not modes <= {'reused-pinned-core', 'full-source-build'}:
+    if len(modes) != 1 or not modes <= {'reused-pinned-core', 'full-source-build', 'reused-published-binary'}:
         raise ValueError('Package does not contain one explicit supported core build mode')
     base_commits = set()
     for platform, item in provenance.items():
@@ -48,6 +49,8 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
             verify_retained_core_provenance(platform, item.get('retainedCore', {}))
             if item.get('coreBuild') is not None:
                 raise ValueError('Reused-core provenance cannot claim a fresh CMake core build')
+        elif item['buildMode'] == 'reused-published-binary':
+            verify_reused_binary(platform, item)
         else:
             core_build = item.get('coreBuild') or {}
             expected_trees = {
