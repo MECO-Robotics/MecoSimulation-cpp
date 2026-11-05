@@ -437,7 +437,7 @@ jobs:
           key: sim-consumer-${{ github.run_id }}-${{ matrix.os }}-${{ matrix.configuration }}
           fail-on-cache-miss: true
       - name: Link clean desktop consumer
-        run: python scripts/consumer_smoke.py --target ${{ matrix.target }} --configuration ${{ matrix.configuration }} --maven-repo build/vendor-maven/maven --meco-base-root MecoBase-cpp
+        run: python scripts/consumer_smoke.py --target ${{ matrix.target }} --configuration ${{ matrix.configuration }} --maven-repo build/vendor-maven/maven --meco-base-root MecoBase-cpp --offline
 
   publish-pages:
     if: startsWith(github.ref, 'refs/tags/v2026.') && inputs.publish

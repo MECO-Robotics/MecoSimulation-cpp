@@ -82,8 +82,9 @@ is no fallback to an older incompatible release. The workflow resolves that ref 
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
-Consumer dependency warm-up runs separately; each clean consumer still compiles,
-links, and executes against the packaged or deployed artifacts.
+Consumer dependency warm-up runs separately; each clean consumer then uses the
+warmed cache offline and still compiles, links, and executes against the packaged
+or deployed artifacts. A missing cached dependency fails the consumer check.
 The Base checksum manifest must still identify the selected 2026.2.12 commit.
 For reruns after a later Base release replaces the Pages root manifest, add
 `scripts/base-2026.2.12-SHA256SUMS.json` and its `.sha256` pin from the verified
