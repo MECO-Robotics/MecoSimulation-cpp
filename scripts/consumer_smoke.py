@@ -123,6 +123,7 @@ model {
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulatedVision.h>
+#include <meco/sim/SimulatedVisionSource.h>
 #include <meco/sim/IdealVisionObservation.h>
 #include <meco/sim/ParticleContacts.h>
 #include <meco/sim/ParticleFieldContacts.h>
@@ -163,6 +164,18 @@ int main() {
   if (meco::sim::VisibleTags(floor, frc::Transform3d{}, tags,
                            60_deg, 50_deg, 3_m) != std::vector<int>{1}) return 31;
   if (!meco::sim::MakeIdealVisionObservation(floor, 0_s, tags, true, 1_m, {1, 1, 1})) return 32;
+  meco::sim::SimulatedVisionSource vision;
+  auto visionIo = vision.MakeIO();
+  vision.Update(floor, 1_s, tags, true, 1_m, {1, 1, 1}, true, true, true);
+  base::VisionInputs visionInputs;
+  visionIo->UpdateInputs(visionInputs);
+  if (!visionInputs.connected || !visionInputs.aligned || visionInputs.observations.size() != 1 ||
+      visionInputs.observations[0].timestamp != 1_s) return 45;
+  visionIo->UpdateInputs(visionInputs);
+  if (!visionInputs.connected || !visionInputs.observations.empty()) return 46;
+  vision.Reset();
+  visionIo->UpdateInputs(visionInputs);
+  if (visionInputs.connected || !visionInputs.observations.empty()) return 47;
   if (!base::sim::IsFootprintClear(2, 2, 0, .4, .4, 1, 10, 8, 0, {})) return 33;
   const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
       {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
