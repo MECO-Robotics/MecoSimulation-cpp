@@ -20,7 +20,7 @@ ARCHIVES = {
     'windowsx86-64': {'Release': 'd0bcd4a438772bee9d085b5f2b586f9f6d1ffbafb45218afa66bcac7d7ee5525', 'Debug': '1054fe1ab4664ed4d31cc8d18e16bd97b8bdeb62fc56157491e6f0f20e26f03f'},
 }
 ALLOWED = {
-    'README.md', 'vendordeps/MecoSimulation.json',
+    'README.md', '.gitattributes', 'vendordeps/MecoSimulation.json',
     'adapters/wpilib-2026/include/meco/sim/DriveTuning.h',
     'adapters/wpilib-2026/include/meco/sim/MotorSimulationFactories.h',
     'scripts/consumer_smoke.py', 'scripts/package_vendordep.py', 'scripts/simulation_headers.py',

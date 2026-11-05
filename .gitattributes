@@ -1,3 +1,4 @@
 # Pinned checksum manifests are hashed as committed bytes; keep Windows checkouts byte-stable.
 scripts/fast_sim_core_manifest.json text eol=lf
 scripts/base-2026.2.12-SHA256SUMS.json text eol=lf
+scripts/published_2026_0_20_manifest.json text eol=lf
