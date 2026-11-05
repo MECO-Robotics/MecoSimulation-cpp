@@ -256,6 +256,12 @@ clamped.
 
 ## Mechanisms
 
+For automatic IO selection, pass `MakeLazyMotorSimulationProvider` a builder
+that returns `MakeMotorSimulationProvider` configured with the robot's motor
+identities, physical properties, and load callbacks. The builder runs once on
+the first simulated motor request; real and replay selection do not invoke it.
+Copied providers share initialization and retained callback ownership.
+
 Pass `MotorSimulationConfig` to `MakeMotorIO(Mode::Sim, vendor, config, model)`.
 The legacy inertia-only overload retains the free motor/flywheel load. Select
 `Load::Arm` with `mass`, `armCOM`, total `outputInertia`, and

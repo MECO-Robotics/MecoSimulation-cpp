@@ -234,11 +234,20 @@ int main() {
   if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
   bool loadRead=false;
-  auto provider=meco::sim::MakeMotorSimulationProvider({
-      {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
-  if (loadRead) return 61;
+  int providerBuilds=0;
+  auto provider=meco::sim::MakeLazyMotorSimulationProvider([&] {
+    ++providerBuilds;
+    return meco::sim::MakeMotorSimulationProvider({
+        {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
+  });
+  auto providerCopy=provider;
   base::MotorConfig motorConfig; motorConfig.ids={1}; motorConfig.reversed={false};
-  auto simMotor=provider(base::Vendor::SparkMax, motorConfig);
+  base::MotorIOSelector selector{provider};
+  auto replayMotor=selector.Make(base::Mode::Replay, base::Vendor::SparkMax, motorConfig);
+  if (!replayMotor || loadRead || providerBuilds) return 61;
+  auto simMotor=selector.Make(base::Mode::Sim, base::Vendor::SparkMax, motorConfig);
+  auto secondMotor=providerCopy(base::Vendor::SparkMax, motorConfig);
+  if (!secondMotor || providerBuilds!=1) return 64;
   if (!simMotor || loadRead) return 62;
   simMotor->SetVoltage(5); simMotor->StepSimulation(.02_s);
   if (!loadRead || simMotor->Read().velocity<=0) return 63;
