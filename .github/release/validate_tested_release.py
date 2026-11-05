@@ -14,6 +14,8 @@ from reuse_published_binary import verify_provenance as verify_reused_binary
 REQUIRED_JOBS = {
     'resolve-base', 'base-vendor-cache', 'build (ubuntu-24.04, linuxx86-64)',
     'build (windows-2022, windowsx86-64)', 'package',
+    *{f'consumer-warm-dependencies ({os}, desktop, {config})'
+      for os in ('ubuntu-24.04', 'windows-2022') for config in ('Debug', 'Release')},
     *{f'consumer-smoke ({os}, desktop, {config})'
       for os in ('ubuntu-24.04', 'windows-2022') for config in ('Debug', 'Release')},
 }

@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--configuration", choices=("Debug", "Release"), required=True)
     parser.add_argument("--maven-repo", type=Path)
     parser.add_argument("--published", action="store_true", help="Resolve both vendordeps from their deployed Maven URLs")
+    parser.add_argument("--warm-dependencies", action="store_true", help="Resolve dependencies only; does not compile or validate the consumer")
     parser.add_argument("--meco-base-root", type=Path, required=True)
     parser.add_argument("--expected-base-version", default="2026.2.12")
     args = parser.parse_args()
@@ -85,6 +86,19 @@ if (baseConsumerMaven) {
                 includeModule('com.mecorobotics.frc', 'meco-base-cpp')
             }
         }
+    }
+}
+tasks.register('warmConsumerDependencies') {
+    doLast {
+        def resolved = 0
+        def prefix = "consumer${providers.gradleProperty('warmConfiguration').get().toLowerCase()}Executable_uber"
+        configurations.findAll { it.canBeResolved && it.name.startsWith(prefix) &&
+            (it.name.endsWith('uberheaders') || it.name.endsWith('uberlink') || it.name.endsWith('uberruntime')) }.each { dependencyConfiguration ->
+            println "Warming consumer configuration: ${dependencyConfiguration.name}"
+            resolved += dependencyConfiguration.files.size()
+        }
+        if (!resolved) throw new GradleException('No consumer dependency artifacts were resolved')
+        println "Resolved ${resolved} consumer dependency artifacts"
     }
 }
 model {
@@ -391,13 +405,18 @@ int main() {
 }
 """, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
-        command = [str(wrapper), "-p", str(root), "consumer" + args.configuration + "Executable", "--no-daemon", "--max-workers=2"]
+        task = "warmConsumerDependencies" if args.warm_dependencies else "consumer" + args.configuration + "Executable"
+        command = [str(wrapper), "-p", str(root), task, "--no-daemon", "--max-workers=2"]
+        if args.warm_dependencies:
+            command.append("-PwarmConfiguration=" + args.configuration)
         if base_coordinate is not None and base_coordinate.is_dir():
             command.append("-PbaseConsumerMaven=" + repo_url)
         if os.name == "nt":
             command.insert(0, "cmd.exe")
             command.insert(1, "/c")
         subprocess.run(command, cwd=root, check=True)
+        if args.warm_dependencies:
+            return  # This only warms the cache; it is not consumer validation.
         executable = root / "build/exe/consumer" / args.configuration.lower() / ("consumer.exe" if os.name == "nt" else "consumer")
         runtime_env = os.environ.copy()
         platform_dir = "windows/x86-64/shared" if os.name == "nt" else "linux/x86-64/shared"
