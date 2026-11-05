@@ -36,6 +36,12 @@ loop to decouple HAL joystick packet publication from SimGUI redraw frequency.
 `DriveSimulationSession::PhysicsTruth()` returns full physical orientation and
 module contact loads; applications do not need to replace hardware feedback code.
 
+`SimulationNetwork.h` provides `ConfigureSimulationNetwork()` for isolated
+desktop runs. When `FRC_SIM_NT_PORT` is set to an integer from 1024 through
+65535, it restarts NT on loopback at that NT4 port with NT3 disabled. Call it
+once before publishing; an unset variable leaves NT server configuration alone.
+Invalid values throw before changing the server.
+
 `SimulatedPieceSensor.h` injects typed observations into MecoBase perception;
 `SimulatedPieceSensorBridge` owns the sensor and a latest-frame mailbox for one
 injected IO consumer. Update it on the simulation thread with the current mount,
