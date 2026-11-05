@@ -20,6 +20,10 @@ simulated motor needs a changing output load. Supply one motor's SI resistance,
 torque constant, and speed constant in `LoadedMotorModel`, plus a callback that
 returns the current opposing output torque in N m. The callback is sampled once
 per robot-period update; its captured season state must outlive the returned IO.
+`LoadedMotorModelFromStallAndFreeSpeed` derives those constants from one motor's
+nominal voltage, stall current, stall torque, and free speed, using an ideal
+zero-current free speed. Configure output inertia and any other model settings
+on the returned model before constructing the IO.
 The model defaults use a 0.0002 s integration substep, 1 s maximum update,
 0.0001 N m/(rad/s) viscous drag, and 0.01 rad/s load direction threshold.
 Game-specific torque calculations remain in the consuming robot project.
