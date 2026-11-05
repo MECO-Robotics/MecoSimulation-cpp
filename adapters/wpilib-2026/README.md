@@ -72,3 +72,14 @@ settling without driving the robot itself. The application supplies clearance
 policy, performs accepted physics resets, cancels blocked autonomous commands,
 and advances the coordinator with actual physics truth once per scene period.
 It returns the odometry reconciliation pose after the configured feedback loops.
+
+`MotorSimulationFactories.h` binds loaded or inertial motor simulation
+configuration into lazy callbacks for a mode-selecting Base motor factory.
+`MakeMotorSimulationProvider` accepts declarative entries keyed by vendor,
+CAN bus and primary ID. It selects the loaded or standard inertial plant only
+when called, and rejects duplicate or missing identities.
+Binding a callback does not construct a simulated motor. Load callbacks retain
+their normal lifetime and ownership requirements.
+`SimulatedVisionSource` and `SimulatedPieceSensorBridge` also expose
+`MakeIOFactory()` callbacks so a mode selector can defer construction of their
+injected IO. Each callback retains its shared sample buffer.

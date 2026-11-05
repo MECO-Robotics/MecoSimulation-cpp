@@ -19,6 +19,7 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "include/base/sim/SimulationTuning.h",
                 root / "include/base/sim/FootprintClearance.h",
                 root / "adapters/wpilib-2026/include/meco/sim/DriveSimulationAdapter.h",
+                root / "adapters/wpilib-2026/include/meco/sim/DriveScene.h",
                 root / "adapters/wpilib-2026/include/meco/sim/DriveResetCoordinator.h",
                 root / "adapters/wpilib-2026/include/meco/sim/BatterySupply.h",
                 root / "adapters/wpilib-2026/include/meco/sim/ColliderNavigation.h",
@@ -33,6 +34,7 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "adapters/wpilib-2026/include/meco/sim/SimulatedPieceSensor.h",
                 root / "adapters/wpilib-2026/include/meco/sim/PracticeMatchController.h",
                 root / "adapters/wpilib-2026/include/meco/sim/LoadedMotorIO.h",
+                root / "adapters/wpilib-2026/include/meco/sim/MotorSimulationFactories.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationDiagnostics.h",
                 root / "include/base/sim/fields/Rebuilt2026.h",
             )
@@ -53,6 +55,7 @@ class SimulationHeadersTest(unittest.TestCase):
             "base/sim/SimulationTuning.h",
             "base/sim/FootprintClearance.h",
                 "meco/sim/DriveSimulationAdapter.h",
+                "meco/sim/DriveScene.h",
                 "meco/sim/DriveResetCoordinator.h",
                 "meco/sim/BatterySupply.h",
                 "meco/sim/ColliderNavigation.h",
@@ -67,6 +70,7 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/SimulatedPieceSensor.h",
                 "meco/sim/PracticeMatchController.h",
                 "meco/sim/LoadedMotorIO.h",
+                "meco/sim/MotorSimulationFactories.h",
                 "meco/sim/SimulationDiagnostics.h",
                 "base/sim/fields/Rebuilt2026.h",
             })
@@ -80,6 +84,7 @@ class SimulationHeadersTest(unittest.TestCase):
             "base/sim/SimulationTuning.h",
             "base/sim/FootprintClearance.h",
             "meco/sim/DriveSimulationAdapter.h",
+                "meco/sim/DriveScene.h",
                 "meco/sim/DriveResetCoordinator.h",
             "meco/sim/BatterySupply.h",
                 "meco/sim/ColliderNavigation.h",
@@ -94,6 +99,7 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/SimulatedPieceSensor.h",
                 "meco/sim/PracticeMatchController.h",
             "meco/sim/LoadedMotorIO.h",
+                "meco/sim/MotorSimulationFactories.h",
             "meco/sim/SimulationDiagnostics.h",
             "base/sim/fields/Rebuilt2026.h",
         }

@@ -10,6 +10,7 @@
 #include <random>
 #include <span>
 #include <stdexcept>
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -112,10 +113,13 @@ class SimulatedPieceSensorBridge {
     explicit SimulatedPieceSensorBridge(PieceSensorConfig config)
         : sensor_(std::move(config)), frame_(std::make_shared<std::optional<base::ObjectDetectionFrame>>()) {}
 
-    std::unique_ptr<base::ObjectDetectionIO> MakeIO() const {
-        return std::make_unique<base::InjectedObjectDetectionIO>(
-            [frame = frame_] { return std::exchange(*frame, std::nullopt); });
+    std::function<std::unique_ptr<base::ObjectDetectionIO>()> MakeIOFactory() const {
+        return [frame = frame_]() -> std::unique_ptr<base::ObjectDetectionIO> {
+            return std::make_unique<base::InjectedObjectDetectionIO>(
+                [frame] { return std::exchange(*frame, std::nullopt); });
+        };
     }
+    std::unique_ptr<base::ObjectDetectionIO> MakeIO() const { return MakeIOFactory()(); }
 
     const base::ObjectDetectionFrame& Update(const frc::Pose3d& robot, const frc::Transform3d& mount,
             std::span<const frc::Translation3d> pieces,

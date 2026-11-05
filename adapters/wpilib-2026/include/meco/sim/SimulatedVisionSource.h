@@ -2,6 +2,7 @@
 #ifndef __FRC_ROBORIO__
 #include "meco/sim/IdealVisionObservation.h"
 #include <base/Vision.h>
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -13,12 +14,15 @@ class SimulatedVisionSource {
  public:
   SimulatedVisionSource() : inputs_(std::make_shared<base::VisionInputs>()) {}
 
-  std::unique_ptr<base::VisionIO> MakeIO() const {
-    return std::make_unique<base::InjectedVisionIO>([inputs = inputs_](auto& out) {
-      out = std::move(*inputs);
-      inputs->observations.clear();
-    });
+  std::function<std::unique_ptr<base::VisionIO>()> MakeIOFactory() const {
+    return [inputs = inputs_]() -> std::unique_ptr<base::VisionIO> {
+      return std::make_unique<base::InjectedVisionIO>([inputs](auto& out) {
+        out = std::move(*inputs);
+        inputs->observations.clear();
+      });
+    };
   }
+  std::unique_ptr<base::VisionIO> MakeIO() const { return MakeIOFactory()(); }
 
   void Reset() { *inputs_ = {}; }
 
