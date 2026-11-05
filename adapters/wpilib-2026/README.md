@@ -89,3 +89,12 @@ their normal lifetime and ownership requirements.
 `SimulatedVisionSource` and `SimulatedPieceSensorBridge` also expose
 `MakeIOFactory()` callbacks so a mode selector can defer construction of their
 injected IO. Each callback retains its shared sample buffer.
+
+`SimulatedPieceCameraBank` coordinates multiple piece-sensor bridges, dynamic
+camera mounts, shared frame sequencing and reset. The application supplies each
+camera's configuration and mount, the scene's field-relative truth, piece and
+obstacle positions, and a clock; it retains ownership of telemetry and policy.
+
+`FootprintNavigation.h` provides opt-in NT obstacle injection and a command
+wrapper that publishes the Base footprint command's outcome. Applications choose
+the NT entries, target, obstacle source, drive and navigation configuration.
