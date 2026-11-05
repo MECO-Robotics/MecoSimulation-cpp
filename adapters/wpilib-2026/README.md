@@ -37,3 +37,13 @@ native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/
 
 `PracticeMatchController.h` provides desktop-only NT practice sequencing and
 robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).
+
+`SimulationPower.h` adds optional charge integration, brownout counting and
+power/physics-clock telemetry on top of the battery supply helper. Construct
+one `SimulationPower` with pack capacity, discharge-curve voltages and internal
+resistance, then call `Update(runtime)` once after each robot period. Keep the
+instance alive through scene resets if battery charge should persist. Its simple
+square-root discharge curve is an estimate, not battery characterization.
+
+`StartPracticeMatch()` returns a command that starts the practice controller
+using the simulated Driver Station alliance and can run while disabled.

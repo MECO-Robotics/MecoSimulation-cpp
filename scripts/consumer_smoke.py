@@ -120,6 +120,7 @@ model {
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/BatterySupply.h>
+#include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulatedVision.h>
 #include <meco/sim/IdealVisionObservation.h>
@@ -229,6 +230,8 @@ int main() {
   const auto pieceId = arena.Spawn(piece);
   drive.RunVelocity(frc::ChassisSpeeds{units::meters_per_second_t{1.0}, units::meters_per_second_t{0.0},
                                         units::radians_per_second_t{0.0}});
+  meco::sim::SimulationPower power({18, 11, 1.6, 0.02});
+  auto startPractice = meco::sim::StartPracticeMatch();
   bool clockAdvancedOnce = true;
   for (int step = 0; step < 50; ++step) {
     const double before = base::simulation::GetSimulationRuntime().Time();
@@ -236,7 +239,7 @@ int main() {
     drive.SimulationPeriodic();
     const double afterFirst = base::simulation::GetSimulationRuntime().Time();
     secondDrive.SimulationPeriodic();
-    meco::sim::UpdateBatterySupply(base::simulation::GetSimulationRuntime());
+    power.Update(base::simulation::GetSimulationRuntime());
     const double afterSecond = base::simulation::GetSimulationRuntime().Time();
     clockAdvancedOnce = clockAdvancedOnce && std::abs(afterFirst - before - 0.02) < 1e-9 &&
                         afterSecond == afterFirst;
