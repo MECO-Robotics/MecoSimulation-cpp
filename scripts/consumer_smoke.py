@@ -339,6 +339,8 @@ int main() {
                                         units::radians_per_second_t{0.0}});
   meco::sim::SimulationPower power({18, 11, 1.6, 0.02});
   auto startPractice = meco::sim::StartPracticeMatch();
+  auto optionalPractice = meco::sim::TryStartPracticeMatch();
+  if (!optionalPractice) return 64;
   bool clockAdvancedOnce = true;
   for (int step = 0; step < 50; ++step) {
     const double before = base::simulation::GetSimulationRuntime().Time();

@@ -66,6 +66,8 @@ square-root discharge curve is an estimate, not battery characterization.
 
 `StartPracticeMatch()` returns a command that starts the practice controller
 using the simulated Driver Station alliance and can run while disabled.
+`TryStartPracticeMatch()` initializes replay selection and returns that command
+only during live simulation; replay returns no command.
 
 `SimulatedVisionSource` turns caller-supplied field-relative robot truth and
 fix status into latest-sample `InjectedVisionIO` observations. The caller owns

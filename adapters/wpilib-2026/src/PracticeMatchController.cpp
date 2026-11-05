@@ -1,4 +1,5 @@
 #include "meco/sim/PracticeMatchController.h"
+#include <base/Replay.h>
 #include <frc2/command/Commands.h>
 #include <frc/simulation/DriverStationSim.h>
 #ifndef __FRC_ROBORIO__
@@ -164,6 +165,12 @@ frc2::CommandPtr StartPracticeMatch() {
         .GetStringTopic("/Sim/Practice/Command").Publish({.keepDuplicates = true});
     command.Set("start");
   }).IgnoringDisable(true);
+}
+std::optional<frc2::CommandPtr> TryStartPracticeMatch() {
+  if (!frc::RobotBase::IsSimulation()) return std::nullopt;
+  base::replay::InitializeFromEnvironment();
+  if (base::replay::Active()) return std::nullopt;
+  return StartPracticeMatch();
 }
 PracticeMatchController::PracticeMatchController(PracticeMatchProfile p,nt::NetworkTableInstance nt):impl_(std::make_unique<Impl>(p,nt)) {}
 PracticeMatchController::~PracticeMatchController()=default;
