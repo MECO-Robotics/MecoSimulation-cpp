@@ -15,8 +15,9 @@ import zipfile
 
 from simulation_headers import collect_simulation_headers, validate_simulation_header_names
 from reuse_simulation_core import verify_retained_core_provenance
+from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
-VERSION = "2026.0.20"
+VERSION = "2026.0.21"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
@@ -40,7 +41,7 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
     ):
         raise ValueError("Release platform builds must come from clean Simulation and Base checkouts")
     modes = {item.get("buildMode") for item in build_provenance.values()}
-    if len(modes) != 1 or not modes <= {"reused-pinned-core", "full-source-build"}:
+    if len(modes) != 1 or not modes <= {"reused-pinned-core", "full-source-build", "reused-published-binary"}:
         raise ValueError("Platform builds must use one explicit, supported core build mode")
     if release:
         root = Path(__file__).resolve().parents[1]
@@ -49,6 +50,8 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
                 verify_retained_core_provenance(platform, item.get("retainedCore", {}))
                 if item.get("coreBuild") is not None:
                     raise ValueError("Reused-core provenance cannot claim a fresh CMake core build")
+            elif item["buildMode"] == "reused-published-binary":
+                verify_reused_binary(platform, item)
             else:
                 core_build = item.get("coreBuild") or {}
                 if (core_build.get("mode") != "full-source-build" or
@@ -114,6 +117,16 @@ def main() -> None:
 
     for classifier, (platform, adapter_lib, physics_libs) in PLATFORMS.items():
         for config, suffix in (("Release", "static"), ("Debug", "staticdebug")):
+            provenance_path = args.build_root / classifier / "provenance.json"
+            provenance = json.loads(provenance_path.read_text()) if provenance_path.is_file() else {}
+            if provenance.get("buildMode") == "reused-published-binary":
+                verify_reused_binary(classifier, provenance)
+                source_archive = args.build_root / classifier / config / "published.zip"
+                if hashlib.sha256(source_archive.read_bytes()).hexdigest() != ARCHIVES[classifier][config]:
+                    raise ValueError("Published binary archive digest mismatch")
+                target = adapter_dir / f"meco-simulation-wpilib-cpp-{VERSION}-{classifier}{suffix}.zip"
+                shutil.copyfile(source_archive, target)
+                continue
             input_archives = tuple(args.build_root / classifier / config / "lib" / name
                                    for name in (adapter_lib, *physics_libs))
             if not all(path.is_file() for path in input_archives):

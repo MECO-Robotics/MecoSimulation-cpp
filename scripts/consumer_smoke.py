@@ -20,9 +20,13 @@ def main() -> None:
     parser.add_argument("--configuration", choices=("Debug", "Release"), required=True)
     parser.add_argument("--maven-repo", type=Path)
     parser.add_argument("--published", action="store_true", help="Resolve both vendordeps from their deployed Maven URLs")
+    parser.add_argument("--warm-dependencies", action="store_true", help="Resolve dependencies only; does not compile or validate the consumer")
+    parser.add_argument("--offline", action="store_true", help="Require dependencies to be present in the warmed Gradle cache")
     parser.add_argument("--meco-base-root", type=Path, required=True)
     parser.add_argument("--expected-base-version", default="2026.2.12")
     args = parser.parse_args()
+    if args.warm_dependencies and args.offline:
+        parser.error("--offline cannot be used while warming dependencies")
     if not args.published and args.maven_repo is None:
         parser.error("--maven-repo is required unless --published is set")
     simulation_root = Path(__file__).resolve().parents[1]
@@ -87,6 +91,26 @@ if (baseConsumerMaven) {
         }
     }
 }
+tasks.register('warmConsumerDependencies') {
+    doLast {
+        def prefix = "consumer${providers.gradleProperty('warmConfiguration').get().toLowerCase()}Executable_uber".toString()
+        def expected = ['headers', 'link', 'runtime'].collect { prefix + it } as Set
+        def selected = configurations.findAll { it.canBeResolved && it.name in expected }
+        if ((selected.collect { it.name } as Set) != expected)
+            throw new GradleException("Missing native consumer dependency configurations: ${expected - (selected.collect { it.name } as Set)}")
+        selected.each { dependencyConfiguration ->
+            def files = dependencyConfiguration.files
+            if (files.empty) throw new GradleException("Empty consumer dependency configuration: ${dependencyConfiguration.name}")
+            println "Warmed ${dependencyConfiguration.name}: ${files.size()} artifacts"
+            if (dependencyConfiguration.name == prefix + 'headers') {
+                def paths = files.collect { it.path.toLowerCase() }
+                if (!paths.any { it.contains('meco-base-cpp') } ||
+                    !paths.any { it.contains('meco-simulation-wpilib-cpp') })
+                    throw new GradleException('Missing Base or Simulation headers in warmed dependencies')
+            }
+        }
+    }
+}
 model {
     components {
         consumer(NativeExecutableSpec) {
@@ -107,7 +131,6 @@ model {
         (root / "src/consumer.cpp").write_text("""#include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <utility>
 #include <hal/HAL.h>
@@ -116,19 +139,13 @@ model {
 #include <frc/simulation/DriverStationSim.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/StringTopic.h>
-#include <base/PortableSwerve.h>
 #include <base/SimulationRuntime.h>
-#include <meco/sim/DriveSimulationAdapter.h>
-#include <meco/sim/DriveResetCoordinator.h>
-#include <meco/sim/DriveScene.h>
 #include <meco/sim/DriverInputTelemetry.h>
-#include <meco/sim/FootprintNavigation.h>
 #include <meco/sim/SimulatedPieceCameraBank.h>
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
 #include <meco/sim/MotorSimulationFactories.h>
-#include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulationLifecycle.h>
@@ -139,29 +156,14 @@ model {
 #include <meco/sim/ParticleFieldContacts.h>
 #include <base/sim/FootprintClearance.h>
 #include <base/sim/SimulationTuning.h>
+#include <meco/sim/DriveTuning.h>
 #include <meco/sim/SimulatedPieceSensor.h>
 #include <meco/sim/PracticeMatchController.h>
 #include <base/sim/fields/Rebuilt2026.h>
 
-class Module final : public base::SwerveModuleIO {
- public:
-  base::SwerveModuleInputs Read() override { return inputs; }
-  void Set(const frc::SwerveModuleState&, double) override {}
-  void SetVoltage(double) override {}
-  void Stop() override {}
-  std::array<double, 2> SimVoltages(double, double) override { return {2.0, 0.0}; }
-  void SetSimInputs(base::SwerveModuleInputs value) override { inputs = value; }
- private:
-  base::SwerveModuleInputs inputs{};
-};
+int RunDriveSmoke();
 
-class Gyro final : public base::SwerveGyroIO {
- public:
-  base::SwerveGyroInputs Read() override { return {yaw, true}; }
-  void SetSimYaw(double value) override { yaw = value; }
- private:
-  double yaw{};
-};
+enum class TestTuning { Automatic, Configured };
 
 int main() {
   using namespace units::literals;
@@ -195,6 +197,15 @@ int main() {
   const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
       {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
   if (base::sim::DeriveSimulationTuning(tuning).maxLinearAcceleration <= 0) return 34;
+  base::DriveConfig tuneConfig;
+  tuneConfig.massKg = 62;
+  tuneConfig.autoTranslationKP = 123;
+  tuneConfig.autoRotationKP = 98;
+  auto retained = meco::sim::ConfigureDriveTuning(tuneConfig, TestTuning::Configured, .02, .08, .50);
+  auto derived = meco::sim::ConfigureDriveTuning(tuneConfig, TestTuning::Automatic, .02, .08, .50);
+  if (retained.autoTranslationKP != 123 || retained.autoRotationKP != 98 ||
+      derived.autoTranslationKP == 123 || derived.autoRotationKP == 98 ||
+      retained.massKg != 62 || derived.massKg != 62) return 55;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
   const meco::sim::ParticleFieldContacts field{base::sim::fields::rebuilt2026::ParticleFieldColliders()};
@@ -222,11 +233,18 @@ int main() {
   if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
   bool loadRead=false;
-  auto provider=meco::sim::MakeMotorSimulationProvider({
-      {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
-  if (loadRead) return 61;
+  int providerBuilds=0;
+  auto provider=meco::sim::MakeLazyMotorSimulationProvider([&] {
+    ++providerBuilds;
+    return meco::sim::MakeMotorSimulationProvider({
+        {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
+  });
+  auto providerCopy=provider;
   base::MotorConfig motorConfig; motorConfig.ids={1}; motorConfig.reversed={false};
+  if (loadRead || providerBuilds) return 61;
   auto simMotor=provider(base::Vendor::SparkMax, motorConfig);
+  auto secondMotor=providerCopy(base::Vendor::SparkMax, motorConfig);
+  if (!secondMotor || providerBuilds!=1) return 64;
   if (!simMotor || loadRead) return 62;
   simMotor->SetVoltage(5); simMotor->StepSimulation(.02_s);
   if (!loadRead || simMotor->Read().velocity<=0) return 63;
@@ -267,6 +285,52 @@ int main() {
     }
   }
   practiceNt.StopLocal();nt::NetworkTableInstance::Destroy(practiceNt);
+  const int result = RunDriveSmoke();
+  // Preserve normal unwinding for a failed check inside the drive portion.
+  if (result > 1) return result;
+  // WPILib 2026.2.1's native trajectory singleton double-frees during global
+  // teardown on this host; release simulation objects before framework globals.
+  std::_Exit(result);
+}
+""", encoding="utf-8")
+        drive_source = """#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <memory>
+#include <utility>
+#include <frc/geometry/Pose2d.h>
+#include <frc/simulation/SimHooks.h>
+#include <base/PortableSwerve.h>
+#include <base/SimulationRuntime.h>
+#include <meco/sim/DriveSimulationAdapter.h>
+#include <meco/sim/DriveScene.h>
+#include <meco/sim/FootprintNavigation.h>
+#include <meco/sim/SimulationPower.h>
+#include <meco/sim/PracticeMatchController.h>
+#include <base/sim/fields/Rebuilt2026.h>
+
+class Module final : public base::SwerveModuleIO {
+ public:
+  base::SwerveModuleInputs Read() override { return inputs; }
+  void Set(const frc::SwerveModuleState&, double) override {}
+  void SetVoltage(double) override {}
+  void Stop() override {}
+  std::array<double, 2> SimVoltages(double, double) override { return {2.0, 0.0}; }
+  void SetSimInputs(base::SwerveModuleInputs value) override { inputs = value; }
+ private:
+  base::SwerveModuleInputs inputs{};
+};
+
+class Gyro final : public base::SwerveGyroIO {
+ public:
+  base::SwerveGyroInputs Read() override { return {yaw, true}; }
+  void SetSimYaw(double value) override { yaw = value; }
+ private:
+  double yaw{};
+};
+
+int RunDriveSmoke() {
+  using namespace units::literals;
   int result = 1;
   {
   base::DriveConfig config{};
@@ -366,19 +430,57 @@ int main() {
                          ? 0
                          : 1;
   }
-  // WPILib 2026.2.1's native trajectory singleton double-frees during global
-  // teardown on this host; release simulation objects before framework globals.
-  std::_Exit(result);
+  return result;
 }
-""", encoding="utf-8")
+"""
+        # Compile the independent scene exercise separately. The call remains
+        # in the same place while drive and secondDrive are still alive; only
+        # translation-unit boundaries change, allowing native builds to parallelize.
+        scene_start = drive_source.index("  // Exercise shared scene ownership")
+        scene_end = drive_source.index("  auto simulation = meco::sim::CreateDriveSimulationAdapter", scene_start)
+        scene_checks = drive_source[scene_start:scene_end]
+        helper_start = drive_source.index("class Module final")
+        helper_end = drive_source.index("int RunDriveSmoke()", helper_start)
+        helpers = drive_source[helper_start:helper_end]
+        drive_source = drive_source[:scene_start] + (
+            "  if (const int sceneResult = RunSceneSmoke(config); sceneResult != 0) return sceneResult;\n"
+        ) + drive_source[scene_end:]
+        drive_source = drive_source.replace("int RunDriveSmoke() {", "int RunSceneSmoke(const base::DriveConfig&);\n\nint RunDriveSmoke() {")
+        (root / "src/drive_smoke.cpp").write_text(drive_source, encoding="utf-8")
+        scene_source = """#include <cmath>
+#include <memory>
+#include <frc/simulation/SimHooks.h>
+#include <base/PortableSwerve.h>
+#include <meco/sim/DriveScene.h>
+""" + helpers + """
+int RunSceneSmoke(const base::DriveConfig& config) {
+  using namespace units::literals;
+  auto makeIO = [] {
+    base::SwerveIO io;
+    for (auto& module : io.modules) module = std::make_unique<Module>();
+    io.gyro = std::make_unique<Gyro>();
+    return io;
+  };
+""" + scene_checks + """
+  return 0;
+}
+"""
+        (root / "src/scene_smoke.cpp").write_text(scene_source, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
-        command = [str(wrapper), "-p", str(root), "consumer" + args.configuration + "Executable", "--no-daemon", "--max-workers=2"]
+        task = "warmConsumerDependencies" if args.warm_dependencies else "consumer" + args.configuration + "Executable"
+        command = [str(wrapper), "-p", str(root), task, "--no-daemon", "--max-workers=4"]
+        if args.warm_dependencies:
+            command.append("-PwarmConfiguration=" + args.configuration)
+        if args.offline:
+            command.append("--offline")
         if base_coordinate is not None and base_coordinate.is_dir():
             command.append("-PbaseConsumerMaven=" + repo_url)
         if os.name == "nt":
             command.insert(0, "cmd.exe")
             command.insert(1, "/c")
         subprocess.run(command, cwd=root, check=True)
+        if args.warm_dependencies:
+            return  # This only warms the cache; it is not consumer validation.
         executable = root / "build/exe/consumer" / args.configuration.lower() / ("consumer.exe" if os.name == "nt" else "consumer")
         runtime_env = os.environ.copy()
         platform_dir = "windows/x86-64/shared" if os.name == "nt" else "linux/x86-64/shared"

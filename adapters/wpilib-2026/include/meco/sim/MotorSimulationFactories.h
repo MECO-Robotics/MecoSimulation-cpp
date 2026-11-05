@@ -3,7 +3,9 @@
 #include "meco/sim/LoadedMotorIO.h"
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 #include <set>
@@ -54,6 +56,34 @@ struct MotorSimulationEntry {
   std::function<double()> loadTorqueNm;
 };
 using MotorSimulationProvider = std::function<std::unique_ptr<base::MotorIO>(base::Vendor, const base::MotorConfig&)>;
+
+// Defer configuration and model construction until the first simulated motor
+// request. Copies share the same initialization; exceptions are propagated and
+// a later request retries. The builder and provider retain their captures.
+inline MotorSimulationProvider MakeLazyMotorSimulationProvider(
+    std::function<MotorSimulationProvider()> build) {
+#ifndef __FRC_ROBORIO__
+  if (!build) throw std::invalid_argument("Missing motor simulation provider builder");
+  struct State {
+    explicit State(std::function<MotorSimulationProvider()> factory) : build(std::move(factory)) {}
+    std::function<MotorSimulationProvider()> build;
+    std::once_flag initialized;
+    MotorSimulationProvider provider;
+  };
+  auto state = std::make_shared<State>(std::move(build));
+  return [state](base::Vendor vendor, const base::MotorConfig& config) {
+    std::call_once(state->initialized, [&] {
+      auto provider = state->build();
+      if (!provider) throw std::runtime_error("Motor simulation provider builder returned null");
+      state->provider = std::move(provider);
+    });
+    return state->provider(vendor, config);
+  };
+#else
+  (void)build;
+  return {};
+#endif
+}
 
 // Build one provider for the robot. Missing or ambiguous identities are errors,
 // so a motor cannot silently acquire another mechanism's physics. Entries and

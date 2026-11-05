@@ -9,10 +9,14 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from reuse_simulation_core import verify_retained_core_provenance
+from reuse_published_binary import verify_provenance as verify_reused_binary
+from validate_job_deadlines import require_timing
 
 REQUIRED_JOBS = {
     'resolve-base', 'base-vendor-cache', 'build (ubuntu-24.04, linuxx86-64)',
     'build (windows-2022, windowsx86-64)', 'package',
+    *{f'consumer-warm-dependencies ({os}, desktop, {config})'
+      for os in ('ubuntu-24.04', 'windows-2022') for config in ('Debug', 'Release')},
     *{f'consumer-smoke ({os}, desktop, {config})'
       for os in ('ubuntu-24.04', 'windows-2022') for config in ('Debug', 'Release')},
 }
@@ -21,9 +25,12 @@ REQUIRED_JOBS = {
 def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_descriptor, base_commit):
     if run.get('event') != 'pull_request' or run.get('status') != 'completed' or run.get('conclusion') != 'success':
         raise ValueError('Package source run is not a successful pull request run')
-    successful = {j['name'] for j in jobs if j.get('status') == 'completed' and j.get('conclusion') == 'success'}
-    if not REQUIRED_JOBS <= successful:
-        raise ValueError('Package source run lacks required successful platform and consumer jobs')
+    required = [j for j in jobs if j.get('name') in REQUIRED_JOBS]
+    if (len(required) != len(REQUIRED_JOBS) or {j['name'] for j in required} != REQUIRED_JOBS or
+            any(j.get('status') != 'completed' or j.get('conclusion') != 'success' for j in required)):
+        raise ValueError('Package source run lacks uniquely identified successful required jobs')
+    for job in required:
+        require_timing(job)
     if descriptor != tagged_descriptor or descriptor.get('version') != manifest.get('version'):
         raise ValueError('Package descriptor differs from the release tag')
     source = manifest.get('sourceCommit')
@@ -36,7 +43,7 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
     if set(provenance) != {'linuxx86-64', 'windowsx86-64'}:
         raise ValueError('Package does not contain both platform builds')
     modes = {item.get('buildMode') for item in provenance.values()}
-    if len(modes) != 1 or not modes <= {'reused-pinned-core', 'full-source-build'}:
+    if len(modes) != 1 or not modes <= {'reused-pinned-core', 'full-source-build', 'reused-published-binary'}:
         raise ValueError('Package does not contain one explicit supported core build mode')
     base_commits = set()
     for platform, item in provenance.items():
@@ -48,6 +55,8 @@ def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_d
             verify_retained_core_provenance(platform, item.get('retainedCore', {}))
             if item.get('coreBuild') is not None:
                 raise ValueError('Reused-core provenance cannot claim a fresh CMake core build')
+        elif item['buildMode'] == 'reused-published-binary':
+            verify_reused_binary(platform, item)
         else:
             core_build = item.get('coreBuild') or {}
             expected_trees = {

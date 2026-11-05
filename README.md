@@ -51,7 +51,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.12 and Simulation
-2026.0.20. This pair rebuilds the adapter for the configurable control-timing
+2026.0.21. This pair rebuilds the adapter for the configurable control-timing
 and CAN-rate APIs; use these matching packages together rather than mixing the
 new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
@@ -63,7 +63,10 @@ Base package alone remains sufficient for roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 
-The release workflow verifies the immutable 2026.0.16 release archives and
+When native build inputs remain unchanged from 2026.0.20, the release workflow
+can reuse its published native archives after verifying their source, provenance,
+and checksums. The updated headers are still checked in clean consumers. If that
+check does not apply, the workflow verifies the immutable 2026.0.16 release archives and
 reuses only their unchanged Jolt/core objects. It rebuilds the four WPILib
 adapter objects against the selected Base headers, checks every retained core
 object against the pinned release archive, and uses the published matching
@@ -79,6 +82,9 @@ is no fallback to an older incompatible release. The workflow resolves that ref 
 and uses the same commit for each build, packaging, and consumer job. Publishing
 merges the new Simulation coordinate into the existing Maven tree and verifies
 deployed checksums and clean consumers.
+Consumer dependency warm-up runs separately; each clean consumer then uses the
+warmed cache offline and still compiles, links, and executes against the packaged
+or deployed artifacts. A missing cached dependency fails the consumer check.
 The Base checksum manifest must still identify the selected 2026.2.12 commit.
 For reruns after a later Base release replaces the Pages root manifest, add
 `scripts/base-2026.2.12-SHA256SUMS.json` and its `.sha256` pin from the verified
@@ -256,6 +262,12 @@ clamped.
 
 ## Mechanisms
 
+For automatic IO selection, pass `MakeLazyMotorSimulationProvider` a builder
+that returns `MakeMotorSimulationProvider` configured with the robot's motor
+identities, physical properties, and load callbacks. The builder runs once on
+the first simulated motor request; real and replay selection do not invoke it.
+Copied providers share initialization and retained callback ownership.
+
 Pass `MotorSimulationConfig` to `MakeMotorIO(Mode::Sim, vendor, config, model)`.
 The legacy inertia-only overload retains the free motor/flywheel load. Select
 `Load::Arm` with `mass`, `armCOM`, total `outputInertia`, and
@@ -354,3 +366,5 @@ is pinned to release source `660eb31` and the assembled artifact from
 [release run 41534819397](https://github.com/MECO-Robotics/MecoBase-cpp/actions/runs/41534819397).
 The downloader checks this snapshot and every immutable Maven coordinate, so a
 later Base release changing the site root cannot change this build.
+
+`meco::sim::ConfigureDriveTuning` applies optional automatic PathPlanner gains from the configured robot physics and motor torque constant. Select `base::SimulationTuning::Configured` to preserve the supplied gains; the simulated physical configuration remains unchanged in either mode.
