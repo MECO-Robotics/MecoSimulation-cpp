@@ -354,3 +354,5 @@ is pinned to release source `660eb31` and the assembled artifact from
 [release run 41534819397](https://github.com/MECO-Robotics/MecoBase-cpp/actions/runs/41534819397).
 The downloader checks this snapshot and every immutable Maven coordinate, so a
 later Base release changing the site root cannot change this build.
+
+`meco::sim::ConfigureDriveTuning` applies optional automatic PathPlanner gains from the configured robot physics and motor torque constant. Select `base::SimulationTuning::Configured` to preserve the supplied gains; the simulated physical configuration remains unchanged in either mode.

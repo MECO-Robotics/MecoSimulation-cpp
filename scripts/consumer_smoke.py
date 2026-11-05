@@ -139,6 +139,7 @@ model {
 #include <meco/sim/ParticleFieldContacts.h>
 #include <base/sim/FootprintClearance.h>
 #include <base/sim/SimulationTuning.h>
+#include <meco/sim/DriveTuning.h>
 #include <meco/sim/SimulatedPieceSensor.h>
 #include <meco/sim/PracticeMatchController.h>
 #include <base/sim/fields/Rebuilt2026.h>
@@ -162,6 +163,8 @@ class Gyro final : public base::SwerveGyroIO {
  private:
   double yaw{};
 };
+
+enum class TestTuning { Automatic, Configured };
 
 int main() {
   using namespace units::literals;
@@ -195,6 +198,15 @@ int main() {
   const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
       {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
   if (base::sim::DeriveSimulationTuning(tuning).maxLinearAcceleration <= 0) return 34;
+  base::DriveConfig tuneConfig;
+  tuneConfig.massKg = 62;
+  tuneConfig.autoTranslationKP = 123;
+  tuneConfig.autoRotationKP = 98;
+  auto retained = meco::sim::ConfigureDriveTuning(tuneConfig, TestTuning::Configured, .02, .08, .50);
+  auto derived = meco::sim::ConfigureDriveTuning(tuneConfig, TestTuning::Automatic, .02, .08, .50);
+  if (retained.autoTranslationKP != 123 || retained.autoRotationKP != 98 ||
+      derived.autoTranslationKP == 123 || derived.autoRotationKP == 98 ||
+      retained.massKg != 62 || derived.massKg != 62) return 55;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
   const meco::sim::ParticleFieldContacts field{base::sim::fields::rebuilt2026::ParticleFieldColliders()};

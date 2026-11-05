@@ -15,6 +15,7 @@ REQUIRED_SIMULATION_HEADERS = {
     "base/sim/FootprintClearance.h",
     "meco/sim/DriveSimulationAdapter.h",
     "meco/sim/DriveScene.h",
+    "meco/sim/DriveTuning.h",
     "meco/sim/DriverInputTelemetry.h",
     "meco/sim/DriveResetCoordinator.h",
     "meco/sim/BatterySupply.h",
