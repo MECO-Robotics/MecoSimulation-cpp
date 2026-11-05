@@ -435,7 +435,7 @@ int RunDriveSmoke() {
 """, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
         task = "warmConsumerDependencies" if args.warm_dependencies else "consumer" + args.configuration + "Executable"
-        command = [str(wrapper), "-p", str(root), task, "--no-daemon", "--max-workers=2"]
+        command = [str(wrapper), "-p", str(root), task, "--no-daemon", "--max-workers=4"]
         if args.warm_dependencies:
             command.append("-PwarmConfiguration=" + args.configuration)
         if args.offline:
