@@ -375,7 +375,7 @@ jobs:
             ~/.gradle/caches/modules-2
             ~/.gradle/caches/8.11/transforms
             ~/.gradle/permwrapper/dists
-          key: sim-consumer-${{ github.run_id }}-${{ matrix.os }}-${{ matrix.configuration }}
+          key: sim-consumer-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.configuration }}
 
   consumer-smoke:
     needs: [resolve-base, package, consumer-warm-dependencies]
@@ -434,7 +434,7 @@ jobs:
             ~/.gradle/caches/modules-2
             ~/.gradle/caches/8.11/transforms
             ~/.gradle/permwrapper/dists
-          key: sim-consumer-${{ github.run_id }}-${{ matrix.os }}-${{ matrix.configuration }}
+          key: sim-consumer-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.configuration }}
           fail-on-cache-miss: true
       - name: Link clean desktop consumer
         run: python scripts/consumer_smoke.py --target ${{ matrix.target }} --configuration ${{ matrix.configuration }} --maven-repo build/vendor-maven/maven --meco-base-root MecoBase-cpp --offline
