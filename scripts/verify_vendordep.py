@@ -14,7 +14,7 @@ from reuse_published_binary import verify_provenance as verify_reused_binary, AR
 
 VERSION = "2026.0.21"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
-CLASSIFIERS = ("linuxx86-64", "windowsx86-64")
+CLASSIFIERS = ("linuxx86-64",)
 
 
 def main() -> None:
@@ -35,6 +35,8 @@ def main() -> None:
     if len(dependencies) != 1:
         raise SystemExit("Expected exactly one combined Simulation dependency")
     dep = dependencies[0]
+    if set(dep.get("binaryPlatforms", [])) != set(CLASSIFIERS):
+        raise SystemExit("Vendordep platforms do not match the packaged targets")
     if (dep.get("groupId"), dep.get("artifactId"), dep.get("version"), dep.get("libName")) != (
         "com.mecorobotics.sim", "meco-simulation-wpilib-cpp", VERSION, "mecoSimAdapter"
     ):
@@ -77,7 +79,7 @@ def main() -> None:
     provenance = manifest.get("buildProvenance", {})
     if not args.platform and (set(provenance) != set(CLASSIFIERS) or
                               any(item.get("baseVendordepVersion") != "2026.2.12" for item in provenance.values())):
-        raise SystemExit("Full package lacks both platform builds or split Base provenance")
+        raise SystemExit("Full package lacks its Linux build or split Base provenance")
     for platform, item in provenance.items():
         if item.get("buildMode") == "reused-published-binary":
             verify_reused_binary(platform, item)

@@ -1,8 +1,7 @@
-# Publishing a previously tested package
+# Publishing a local package
 
-The `publish-tested-package.yml` workflow can publish the vendordep artifact
-from a successful pull-request run when its merge commit and the release tag
-have identical source trees and parents. It checks both platform and consumer
-jobs, clean build provenance, the pinned Base revision, descriptor and package
-checksums before deploying. Deployed consumer configurations run separately
-with a three-minute timeout per platform job.
+Follow the local build, bundle, and publication instructions in the root
+README. The publication workflow verifies the bundle against the release tag;
+only production tags run deployed checksum and consumer checks. The older
+tested-run validator in this directory is retained for historical releases and
+is not part of the current publication workflow.

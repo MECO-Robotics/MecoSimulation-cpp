@@ -5,7 +5,7 @@ Start with [simulation basics](simulation-basics.md) for a short overview.
 ![Simulation physics produces sensor readings and shares battery voltage](visuals/simulation-basics.png)
 
 
-This repository builds the Jolt world, drivetrain model, and generic arena as a standalone C++ library. Its optional WPILib 2026 artifact connects a MECO Base drive and arena to Base's fixed-step runtime. The vendordep targets Linux and Windows desktop; it does not add a roboRIO library. A clean Linux Base plus Simulation consumer links locally in Debug and Release. Windows CI links and public Maven resolution remain release gates.
+This repository builds the Jolt world, drivetrain model, and generic arena as a standalone C++ library. Its optional WPILib 2026 artifact connects a MECO Base drive and arena to Base's fixed-step runtime. Future vendordep releases target Linux desktop; it does not add a roboRIO library. A clean Linux Base plus Simulation consumer links locally in Debug and Release. Production releases require Linux public consumer links and public Maven verification.
 
 ## Build and test
 
@@ -47,4 +47,4 @@ Call [`UpdateBatterySupply`](../adapters/wpilib-2026/include/meco/sim/BatterySup
 
 ## Limits
 
-The model does not validate Phoenix or REV firmware, CAN timing, hardware calibration, or physical safety. Linux and Windows desktop builds are the vendordep support targets. Other platforms may compile the standalone CMake project but are not part of the published compatibility claim.
+The model does not validate Phoenix or REV firmware, CAN timing, hardware calibration, or physical safety. Linux desktop is the vendordep release target. Other platforms may compile the standalone CMake project but are not part of the published compatibility claim.

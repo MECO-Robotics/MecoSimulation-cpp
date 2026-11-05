@@ -22,6 +22,6 @@ and ideal AprilTag visibility helpers. None of these helpers steps physics.
 NT. AutoDrive's match context must still come through normal DriverStation APIs
 and the application's season model, not simulation control topics.
 
-Local Linux development packages are not public releases. A release requires
-Linux/Windows native builds and clean consumers; local Linux validation does
-not establish Windows or hardware acceptance.
+Local Linux development packages are not public releases. A full package requires
+a Linux native build; production releases also require public consumer checks.
+Local Linux validation does not establish hardware acceptance.

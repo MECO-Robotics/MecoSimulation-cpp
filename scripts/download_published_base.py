@@ -40,6 +40,8 @@ def main() -> None:
                     item.get("artifactId") == "meco-base-cpp"]
     if len(dependencies) != 1 or dependencies[0].get("version") != args.version:
         raise ValueError("Pinned Base source descriptor does not declare the expected split package")
+    if not dependencies[0].get("binaryPlatforms"):
+        raise ValueError("Pinned Base descriptor declares no binary platforms")
 
     site = "https://meco-robotics.github.io/MecoBase-cpp"
     default_snapshot = Path(__file__).with_name(f"base-{args.version}-SHA256SUMS.json")
@@ -75,7 +77,7 @@ def main() -> None:
     artifact_name = f"meco-base-cpp-{args.version}"
     required = [f"{coordinate}/{artifact_name}.pom"]
     required.extend(f"{coordinate}/{artifact_name}-{platform}{configuration}.zip"
-                    for platform in ("linuxathena", "linuxx86-64", "windowsx86-64")
+                    for platform in dependencies[0].get("binaryPlatforms", ())
                     for configuration in ("static", "staticdebug"))
     required.extend(f"{coordinate}/{artifact_name}-{kind}.zip" for kind in ("headers", "sources"))
     args.output.mkdir(parents=True, exist_ok=True)

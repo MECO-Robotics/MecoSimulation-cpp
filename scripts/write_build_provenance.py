@@ -36,6 +36,7 @@ def main() -> None:
                         help="Directory containing verified retained-core release/debug provenance")
     parser.add_argument("--release-tests-passed", action="store_true")
     parser.add_argument("--debug-build-passed", action="store_true")
+    parser.add_argument("--origin", choices=("local",), help="Mark artifacts built by the local release helper")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     base = args.base_root.resolve()
@@ -92,6 +93,8 @@ def main() -> None:
         "retainedCore": retained_core,
         "coreBuild": core_build,
     }
+    if args.origin:
+        metadata["buildOrigin"] = args.origin
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

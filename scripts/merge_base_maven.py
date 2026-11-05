@@ -25,7 +25,7 @@ def merge(base_root: Path, simulation_root: Path, expected_version: str = "2026.
     base_coordinate = base_maven / "com/mecorobotics/frc/meco-base-cpp" / expected_version
     required = [base_coordinate / f"meco-base-cpp-{expected_version}.pom"]
     required.extend(base_coordinate / f"meco-base-cpp-{expected_version}-{platform}{suffix}.zip"
-                    for platform in ("linuxathena", "linuxx86-64", "windowsx86-64")
+                    for platform in coordinates[0].get("binaryPlatforms", ("linuxathena", "linuxx86-64", "windowsx86-64"))
                     for suffix in ("static", "staticdebug"))
     required.extend(base_coordinate / f"meco-base-cpp-{expected_version}-{kind}.zip"
                     for kind in ("headers", "sources"))

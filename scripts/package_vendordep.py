@@ -21,7 +21,6 @@ VERSION = "2026.0.21"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
-    "windowsx86-64": ("windows/x86-64", "mecoSimAdapter.lib", ("frc_jolt.lib", "Jolt.lib")),
 }
 EPOCH = (1980, 1, 1, 0, 0, 0)
 
@@ -97,6 +96,7 @@ def main() -> None:
     parser.add_argument("--build-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--allow-missing-platform", action="append", choices=tuple(PLATFORMS), default=[])
+    parser.add_argument("--development", action="store_true", help="Allow unverified local development provenance")
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -174,6 +174,8 @@ def main() -> None:
         raise ValueError("Vendordep must expose the combined adapter and physics archive")
     if dependencies[0].get("artifactId") != "meco-simulation-wpilib-cpp" or dependencies[0].get("version") != VERSION:
         raise ValueError("Vendordep dependency coordinates do not match emitted artifacts")
+    if set(dependencies[0].get("binaryPlatforms", [])) != set(PLATFORMS):
+        raise ValueError("Vendordep platforms do not match emitted artifacts")
     for classifier in PLATFORMS:
         for suffix in ("static", "staticdebug"):
             archive = adapter_dir / f"meco-simulation-wpilib-cpp-{VERSION}-{classifier}{suffix}.zip"
@@ -194,7 +196,7 @@ def main() -> None:
             build_provenance[classifier] = json.loads(path.read_text(encoding="utf-8"))
         elif not args.allow_missing_platform:
             raise FileNotFoundError(f"Required build provenance is missing: {path}")
-    validate_build_provenance(build_provenance, commit, not args.allow_missing_platform)
+    validate_build_provenance(build_provenance, commit, not args.allow_missing_platform and not args.development)
     manifest = {
         "version": VERSION,
         "sourceCommit": os.environ.get("GITHUB_SHA", commit),

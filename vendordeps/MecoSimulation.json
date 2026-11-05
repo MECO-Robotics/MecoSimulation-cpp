@@ -21,8 +21,7 @@
       "sharedLibrary": false,
       "skipInvalidPlatforms": true,
       "binaryPlatforms": [
-        "linuxx86-64",
-        "windowsx86-64"
+        "linuxx86-64"
       ]
     }
   ]
