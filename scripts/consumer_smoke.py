@@ -198,6 +198,15 @@ int main() {
   sensorConfig.dropout=0; sensorConfig.angularNoise=0;
   meco::sim::SimulatedPieceSensor sensor(sensorConfig);
   const std::vector<frc::Translation3d> points{{2_m,0_m,0_m},{-1_m,0_m,0_m}};
+  meco::sim::SimulatedPieceSensorBridge bridge(sensorConfig);
+  auto pieceIo = bridge.MakeIO();
+  bridge.Update(frc::Pose3d{}, frc::Transform3d{}, points, {}, 1_s, 7);
+  auto pieceFrame = pieceIo->ReadFrame();
+  if (!pieceFrame || pieceFrame->sequence != 7 || pieceFrame->detections.size() != 1 ||
+      pieceIo->ReadFrame()) return 49;
+  bridge.Update(frc::Pose3d{}, frc::Transform3d{}, points, {}, 1_s, 8);
+  bridge.Reset();
+  if (pieceIo->ReadFrame()) return 50;
   const auto ray=sensor.Observe(frc::Pose3d{}, points, {}, 1_s);
   if (!ray || std::abs(ray->yawDegrees)>1e-9) return 40;
   base::sim::BodySpec blocker;
