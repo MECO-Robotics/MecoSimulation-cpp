@@ -293,7 +293,7 @@ int main() {
   std::_Exit(result);
 }
 """, encoding="utf-8")
-        (root / "src/drive_smoke.cpp").write_text("""#include <algorithm>
+        drive_source = """#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -432,7 +432,40 @@ int RunDriveSmoke() {
   }
   return result;
 }
-""", encoding="utf-8")
+"""
+        # Compile the independent scene exercise separately. The call remains
+        # in the same place while drive and secondDrive are still alive; only
+        # translation-unit boundaries change, allowing native builds to parallelize.
+        scene_start = drive_source.index("  // Exercise shared scene ownership")
+        scene_end = drive_source.index("  auto simulation = meco::sim::CreateDriveSimulationAdapter", scene_start)
+        scene_checks = drive_source[scene_start:scene_end]
+        helper_start = drive_source.index("class Module final")
+        helper_end = drive_source.index("int RunDriveSmoke()", helper_start)
+        helpers = drive_source[helper_start:helper_end]
+        drive_source = drive_source[:scene_start] + (
+            "  if (const int sceneResult = RunSceneSmoke(config); sceneResult != 0) return sceneResult;\n"
+        ) + drive_source[scene_end:]
+        drive_source = drive_source.replace("int RunDriveSmoke() {", "int RunSceneSmoke(const base::DriveConfig&);\n\nint RunDriveSmoke() {")
+        (root / "src/drive_smoke.cpp").write_text(drive_source, encoding="utf-8")
+        scene_source = """#include <cmath>
+#include <memory>
+#include <frc/simulation/SimHooks.h>
+#include <base/PortableSwerve.h>
+#include <meco/sim/DriveScene.h>
+""" + helpers + """
+int RunSceneSmoke(const base::DriveConfig& config) {
+  using namespace units::literals;
+  auto makeIO = [] {
+    base::SwerveIO io;
+    for (auto& module : io.modules) module = std::make_unique<Module>();
+    io.gyro = std::make_unique<Gyro>();
+    return io;
+  };
+""" + scene_checks + """
+  return 0;
+}
+"""
+        (root / "src/scene_smoke.cpp").write_text(scene_source, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
         task = "warmConsumerDependencies" if args.warm_dependencies else "consumer" + args.configuration + "Executable"
         command = [str(wrapper), "-p", str(root), task, "--no-daemon", "--max-workers=4"]
