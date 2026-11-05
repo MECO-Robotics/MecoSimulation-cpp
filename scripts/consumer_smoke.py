@@ -128,7 +128,6 @@ model {
         (root / "src/consumer.cpp").write_text("""#include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <utility>
 #include <hal/HAL.h>
@@ -137,19 +136,13 @@ model {
 #include <frc/simulation/DriverStationSim.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/StringTopic.h>
-#include <base/PortableSwerve.h>
 #include <base/SimulationRuntime.h>
-#include <meco/sim/DriveSimulationAdapter.h>
-#include <meco/sim/DriveResetCoordinator.h>
-#include <meco/sim/DriveScene.h>
 #include <meco/sim/DriverInputTelemetry.h>
-#include <meco/sim/FootprintNavigation.h>
 #include <meco/sim/SimulatedPieceCameraBank.h>
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
 #include <meco/sim/MotorSimulationFactories.h>
-#include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulationLifecycle.h>
@@ -165,25 +158,7 @@ model {
 #include <meco/sim/PracticeMatchController.h>
 #include <base/sim/fields/Rebuilt2026.h>
 
-class Module final : public base::SwerveModuleIO {
- public:
-  base::SwerveModuleInputs Read() override { return inputs; }
-  void Set(const frc::SwerveModuleState&, double) override {}
-  void SetVoltage(double) override {}
-  void Stop() override {}
-  std::array<double, 2> SimVoltages(double, double) override { return {2.0, 0.0}; }
-  void SetSimInputs(base::SwerveModuleInputs value) override { inputs = value; }
- private:
-  base::SwerveModuleInputs inputs{};
-};
-
-class Gyro final : public base::SwerveGyroIO {
- public:
-  base::SwerveGyroInputs Read() override { return {yaw, true}; }
-  void SetSimYaw(double value) override { yaw = value; }
- private:
-  double yaw{};
-};
+int RunDriveSmoke();
 
 enum class TestTuning { Automatic, Configured };
 
@@ -307,6 +282,52 @@ int main() {
     }
   }
   practiceNt.StopLocal();nt::NetworkTableInstance::Destroy(practiceNt);
+  const int result = RunDriveSmoke();
+  // Preserve normal unwinding for a failed check inside the drive portion.
+  if (result > 1) return result;
+  // WPILib 2026.2.1's native trajectory singleton double-frees during global
+  // teardown on this host; release simulation objects before framework globals.
+  std::_Exit(result);
+}
+""", encoding="utf-8")
+        (root / "src/drive_smoke.cpp").write_text("""#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <memory>
+#include <utility>
+#include <frc/geometry/Pose2d.h>
+#include <frc/simulation/SimHooks.h>
+#include <base/PortableSwerve.h>
+#include <base/SimulationRuntime.h>
+#include <meco/sim/DriveSimulationAdapter.h>
+#include <meco/sim/DriveScene.h>
+#include <meco/sim/FootprintNavigation.h>
+#include <meco/sim/SimulationPower.h>
+#include <meco/sim/PracticeMatchController.h>
+#include <base/sim/fields/Rebuilt2026.h>
+
+class Module final : public base::SwerveModuleIO {
+ public:
+  base::SwerveModuleInputs Read() override { return inputs; }
+  void Set(const frc::SwerveModuleState&, double) override {}
+  void SetVoltage(double) override {}
+  void Stop() override {}
+  std::array<double, 2> SimVoltages(double, double) override { return {2.0, 0.0}; }
+  void SetSimInputs(base::SwerveModuleInputs value) override { inputs = value; }
+ private:
+  base::SwerveModuleInputs inputs{};
+};
+
+class Gyro final : public base::SwerveGyroIO {
+ public:
+  base::SwerveGyroInputs Read() override { return {yaw, true}; }
+  void SetSimYaw(double value) override { yaw = value; }
+ private:
+  double yaw{};
+};
+
+int RunDriveSmoke() {
+  using namespace units::literals;
   int result = 1;
   {
   base::DriveConfig config{};
@@ -406,9 +427,7 @@ int main() {
                          ? 0
                          : 1;
   }
-  // WPILib 2026.2.1's native trajectory singleton double-frees during global
-  // teardown on this host; release simulation objects before framework globals.
-  std::_Exit(result);
+  return result;
 }
 """, encoding="utf-8")
         wrapper = simulation_root / "adapters/wpilib-2026/gradlew.bat" if os.name == "nt" else simulation_root / "adapters/wpilib-2026/gradlew"
