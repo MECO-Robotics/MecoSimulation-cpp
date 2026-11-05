@@ -11,6 +11,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -37,10 +39,22 @@ def sha256(data: bytes) -> str:
 
 
 def fetch(url: str) -> bytes:
-    with urllib.request.urlopen(url, timeout=30) as response:
-        if response.status != 200:
-            raise RuntimeError(f"HTTP {response.status}: {url}")
-        return response.read()
+    # Pages occasionally returns a transient 5xx while serving a pinned core.
+    # Bound retries so they cannot silently extend the platform build window.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=6) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"HTTP {response.status}: {url}")
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code not in {429, 500, 502, 503, 504} or attempt == 2:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+        time.sleep(0.5 * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 def git_output(root: Path, *args: str) -> str:
