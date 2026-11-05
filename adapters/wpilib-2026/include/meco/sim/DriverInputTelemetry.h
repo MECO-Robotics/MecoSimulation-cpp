@@ -1,9 +1,10 @@
 #pragma once
 
-#include <base/NtGamepad.h>
 #include <frc/geometry/Rotation2d.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <networktables/NetworkTableInstance.h>
+#include <networktables/DoubleArrayTopic.h>
+#include <ntcore_cpp.h>
 #include <array>
 #include <cmath>
 #include <cstdlib>
@@ -23,7 +24,8 @@ class DriverInputTelemetry {
     frc::SmartDashboard::PutBoolean("Simulation/NTGamepad/Enabled", enabled_);
   }
   bool Selected(bool selected) const { return ReadOverride().value_or(selected); }
-  void Publish(const base::NtGamepad::State &state, double leftY, double leftX, double rightX,
+  template <class GamepadState>
+  void Publish(const GamepadState &state, double leftY, double leftX, double rightX,
                double x, double y, double omega, frc::Rotation2d heading, bool hasGamepad) {
     const int64_t timestamp = nt::Now();
     const double fieldX = x * heading.Cos() - y * heading.Sin();

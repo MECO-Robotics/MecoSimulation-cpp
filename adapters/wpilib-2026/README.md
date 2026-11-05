@@ -97,4 +97,5 @@ obstacle positions, and a clock; it retains ownership of telemetry and policy.
 
 `FootprintNavigation.h` provides opt-in NT obstacle injection and a command
 wrapper that publishes the Base footprint command's outcome. Applications choose
-the NT entries, target, obstacle source, drive and navigation configuration.
+the NT entries, target, obstacle source, drive, navigation configuration and
+outcome-to-name function.

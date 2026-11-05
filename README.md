@@ -51,7 +51,7 @@ configuration, and known limits.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current package requires Base 2026.2.12 and Simulation
-2026.0.18. This pair rebuilds the adapter for the configurable control-timing
+2026.0.20. This pair rebuilds the adapter for the configurable control-timing
 and CAN-rate APIs; use these matching packages together rather than mixing the
 new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct

@@ -121,9 +121,13 @@ model {
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/DriveResetCoordinator.h>
 #include <meco/sim/DriveScene.h>
+#include <meco/sim/DriverInputTelemetry.h>
+#include <meco/sim/FootprintNavigation.h>
+#include <meco/sim/SimulatedPieceCameraBank.h>
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
+#include <meco/sim/MotorSimulationFactories.h>
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
@@ -217,6 +221,26 @@ int main() {
   const std::vector<base::sim::BodySpec> blockers{blocker};
   if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
+  bool loadRead=false;
+  auto provider=meco::sim::MakeMotorSimulationProvider({
+      {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
+  if (loadRead) return 61;
+  base::MotorConfig motorConfig; motorConfig.ids={1}; motorConfig.reversed={false};
+  auto simMotor=provider(base::Vendor::SparkMax, motorConfig);
+  if (!simMotor || loadRead) return 62;
+  simMotor->SetVoltage(5); simMotor->StepSimulation(.02_s);
+  if (!loadRead || simMotor->Read().velocity<=0) return 63;
+  struct GamepadState { long long sequence=1, sourceTimestampUs=1; bool accepted=true; double ageMs=0; };
+  meco::sim::DriverInputTelemetry driverTelemetry(false);
+  driverTelemetry.Publish(GamepadState{}, 0, 0, 0, 0, 0, 0, frc::Rotation2d{}, true);
+  meco::sim::SimulatedPieceCameraBank cameraBank(1);
+  meco::sim::PieceSensorConfig bankConfig; bankConfig.dropout=0; bankConfig.angularNoise=0;
+  auto bankIo=cameraBank.Configure(0, bankConfig, [] { return frc::Transform3d{}; });
+  const std::vector<frc::Translation3d> cameraPoints{{2_m,0_m,0_m}};
+  auto cameraSamples=cameraBank.Update(frc::Pose3d{}, cameraPoints, {}, [] {return 1_s;});
+  auto cameraFrame=bankIo->ReadFrame();
+  if (cameraSamples.size()!=1 || cameraSamples[0].detections!=1 || !cameraFrame || cameraFrame->sequence!=1) return 60;
+  cameraBank.Reset();
   {
     meco::sim::SimulationLifecycle lifecycle({18, 11, 1.6, .02, 20, 3, 140});
     lifecycle.Initialize();
@@ -257,6 +281,12 @@ int main() {
   };
   base::Drive drive(config, makeIO());
   base::Drive secondDrive(config, makeIO());
+  base::FootprintAutoDriveConfig footprint{};
+  auto footprintCommand=meco::sim::FootprintCommandWithOutcome(drive,
+      []() -> std::optional<frc::Pose2d> {return std::nullopt;},
+      [] {return std::vector<base::FieldRectangle>{};}, footprint,
+      nt::NetworkTableInstance::GetDefault().GetEntry("/Smoke/FootprintOutcome"),
+      [](base::FootprintAutoDriveOutcome) {return "complete";});
   // Exercise shared scene ownership, reset settling, and a blocked auto pose
   // through the actual Drive and simulation adapter.
   {

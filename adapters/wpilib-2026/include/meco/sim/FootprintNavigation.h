@@ -18,17 +18,20 @@ inline void AppendInjectedFootprintObstacle(std::vector<base::FieldRectangle>& b
 }
 
 // Caller retains navigation configuration, geometry, targets and scheduling.
-// The command retains its shared outcome and publishes it after termination.
+// The command retains its shared outcome and publishes its caller-supplied name
+// after termination.
 inline frc2::CommandPtr FootprintCommandWithOutcome(
     base::Drive& drive, base::AutoDriveTarget target,
     std::function<std::vector<base::FieldRectangle>()> obstacles,
-    base::FootprintAutoDriveConfig config, nt::NetworkTableEntry outcomeEntry) {
+    base::FootprintAutoDriveConfig config, nt::NetworkTableEntry outcomeEntry,
+    std::function<const char*(base::FootprintAutoDriveOutcome)> outcomeName) {
+  if (!outcomeName) throw std::invalid_argument("Missing footprint outcome name function");
   auto outcome = std::make_shared<base::FootprintAutoDriveOutcome>();
   outcomeEntry.SetString("running");
   return base::AutoDriveFootprintToPose(drive, std::move(target), std::move(obstacles),
                                        std::move(config), outcome)
-      .FinallyDo([outcomeEntry, outcome](bool) mutable {
-        outcomeEntry.SetString(base::FootprintOutcomeName(*outcome));
+      .FinallyDo([outcomeEntry, outcome, outcomeName = std::move(outcomeName)](bool) mutable {
+        outcomeEntry.SetString(outcomeName(*outcome));
       });
 }
 } // namespace meco::sim
