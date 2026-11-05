@@ -51,6 +51,12 @@ frame. Native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../.
 `PracticeMatchController.h` provides desktop-only NT practice sequencing and
 robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).
 
+`SimulationLifecycle.h` groups network setup, configurable battery state,
+practice sequencing, scheduler latency probes and Driver Station packets.
+Call its hooks at the existing scheduler and simulation-loop boundaries. It
+does not step physics or advance the clock, and skips power, practice and
+simulated Driver Station packet updates while replay is active.
+
 `SimulationPower.h` adds optional charge integration, brownout counting and
 power/physics-clock telemetry on top of the battery supply helper. Construct
 one `SimulationPower` with pack capacity, discharge-curve voltages and internal
@@ -60,6 +66,8 @@ square-root discharge curve is an estimate, not battery characterization.
 
 `StartPracticeMatch()` returns a command that starts the practice controller
 using the simulated Driver Station alliance and can run while disabled.
+`TryStartPracticeMatch()` initializes replay when a log is requested and returns
+that command only during live simulation; replay returns no command.
 
 `SimulatedVisionSource` turns caller-supplied field-relative robot truth and
 fix status into latest-sample `InjectedVisionIO` observations. The caller owns
@@ -72,3 +80,24 @@ settling without driving the robot itself. The application supplies clearance
 policy, performs accepted physics resets, cancels blocked autonomous commands,
 and advances the coordinator with actual physics truth once per scene period.
 It returns the odometry reconciliation pose after the configured feedback loops.
+
+`MotorSimulationFactories.h` binds loaded or inertial motor simulation
+configuration into lazy callbacks for a mode-selecting Base motor factory.
+`MakeMotorSimulationProvider` accepts declarative entries keyed by vendor,
+CAN bus and primary ID. It selects the loaded or standard inertial plant only
+when called, and rejects duplicate or missing identities.
+Binding a callback does not construct a simulated motor. Load callbacks retain
+their normal lifetime and ownership requirements.
+`SimulatedVisionSource` and `SimulatedPieceSensorBridge` also expose
+`MakeIOFactory()` callbacks so a mode selector can defer construction of their
+injected IO. Each callback retains its shared sample buffer.
+
+`SimulatedPieceCameraBank` coordinates multiple piece-sensor bridges, dynamic
+camera mounts, shared frame sequencing and reset. The application supplies each
+camera's configuration and mount, the scene's field-relative truth, piece and
+obstacle positions, and a clock; it retains ownership of telemetry and policy.
+
+`FootprintNavigation.h` provides opt-in NT obstacle injection and a command
+wrapper that publishes the Base footprint command's outcome. Applications choose
+the NT entries, target, obstacle source, drive, navigation configuration and
+outcome-to-name function.

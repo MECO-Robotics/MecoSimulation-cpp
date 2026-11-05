@@ -120,12 +120,18 @@ model {
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/DriveResetCoordinator.h>
+#include <meco/sim/DriveScene.h>
+#include <meco/sim/DriverInputTelemetry.h>
+#include <meco/sim/FootprintNavigation.h>
+#include <meco/sim/SimulatedPieceCameraBank.h>
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
+#include <meco/sim/MotorSimulationFactories.h>
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
+#include <meco/sim/SimulationLifecycle.h>
 #include <meco/sim/SimulatedVision.h>
 #include <meco/sim/SimulatedVisionSource.h>
 #include <meco/sim/IdealVisionObservation.h>
@@ -215,6 +221,34 @@ int main() {
   const std::vector<base::sim::BodySpec> blockers{blocker};
   if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
+  bool loadRead=false;
+  auto provider=meco::sim::MakeMotorSimulationProvider({
+      {base::Vendor::SparkMax, "", 1, .02, motor, [&] {loadRead=true; return 0.;}}});
+  if (loadRead) return 61;
+  base::MotorConfig motorConfig; motorConfig.ids={1}; motorConfig.reversed={false};
+  auto simMotor=provider(base::Vendor::SparkMax, motorConfig);
+  if (!simMotor || loadRead) return 62;
+  simMotor->SetVoltage(5); simMotor->StepSimulation(.02_s);
+  if (!loadRead || simMotor->Read().velocity<=0) return 63;
+  struct GamepadState { long long sequence=1, sourceTimestampUs=1; bool accepted=true; double ageMs=0; };
+  meco::sim::DriverInputTelemetry driverTelemetry(false);
+  driverTelemetry.Publish(GamepadState{}, 0, 0, 0, 0, 0, 0, frc::Rotation2d{}, true);
+  meco::sim::SimulatedPieceCameraBank cameraBank(1);
+  meco::sim::PieceSensorConfig bankConfig; bankConfig.dropout=0; bankConfig.angularNoise=0;
+  auto bankIo=cameraBank.Configure(0, bankConfig, [] { return frc::Transform3d{}; });
+  const std::vector<frc::Translation3d> cameraPoints{{2_m,0_m,0_m}};
+  auto cameraSamples=cameraBank.Update(frc::Pose3d{}, cameraPoints, {}, [] {return 1_s;});
+  auto cameraFrame=bankIo->ReadFrame();
+  if (cameraSamples.size()!=1 || cameraSamples[0].detections!=1 || !cameraFrame || cameraFrame->sequence!=1) return 60;
+  cameraBank.Reset();
+  {
+    meco::sim::SimulationLifecycle lifecycle({18, 11, 1.6, .02, 20, 3, 140});
+    lifecycle.Initialize();
+    const auto before = base::simulation::GetSimulationRuntime().Time();
+    lifecycle.BeforeScheduler(); lifecycle.AfterScheduler();
+    lifecycle.BeforeScene(); lifecycle.AfterScene();
+    if (base::simulation::GetSimulationRuntime().Time() != before) return 60;
+  }
   // Verify the packaged implementation, including both station mappings.
   auto practiceNt=nt::NetworkTableInstance::Create();
   practiceNt.StartLocal();
@@ -247,46 +281,54 @@ int main() {
   };
   base::Drive drive(config, makeIO());
   base::Drive secondDrive(config, makeIO());
+  base::FootprintAutoDriveConfig footprint{};
+  auto footprintCommand=meco::sim::FootprintCommandWithOutcome(drive,
+      []() -> std::optional<frc::Pose2d> {return std::nullopt;},
+      [] {return std::vector<base::FieldRectangle>{};}, footprint,
+      nt::NetworkTableInstance::GetDefault().GetEntry("/Smoke/FootprintOutcome"),
+      [](base::FootprintAutoDriveOutcome) {return "complete";});
+  // Exercise shared scene ownership, reset settling, and a blocked auto pose
+  // through the actual Drive and simulation adapter.
+  {
+  base::Drive sceneDrive(config, makeIO());
+  bool clear = true;
+  int sensorResets = 0;
+  meco::sim::DriveScene scene(sceneDrive, {.fieldCollidersEnabled=false, .feedbackLoops=2,
+      .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; },
+      .resetSensors=[&] { ++sensorResets; }});
+  scene.Reset(frc::Pose2d{});
+  scene.BeginAutonomousSchedule();
+  sceneDrive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  if (scene.EndAutonomousSchedule() || scene.Ready() || sensorResets != 1) return 52;
+  auto initial = sceneDrive.SimulationTruth();
+  if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
+  for (int i=0; i<2; ++i) {
+    frc::sim::StepTiming(.02_s);
+    sceneDrive.SimulationPeriodic();
+    if (!scene.Update() || scene.Ready() != (i == 1)) return 55;
+  }
+  // Enable clearance rejection using an enabled but empty field.
+  sceneDrive.SetPoseResetCallback({});
+  }
+  {
+  base::Drive sceneDrive(config, makeIO());
+  bool clear = false;
+  meco::sim::DriveScene scene(sceneDrive, {.fieldCollidersEnabled=true, .feedbackLoops=2,
+      .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; }, .resetSensors={}});
+  scene.Reset(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  scene.BeginAutonomousSchedule();
+  sceneDrive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
+  if (!scene.EndAutonomousSchedule()) return 57;
+  auto afterBlocked = sceneDrive.SimulationTruth();
+  if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
+  sceneDrive.SetPoseResetCallback({});
+  }
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
   if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w) ||
       base::sim::fields::rebuilt2026::FieldColliders().size() != 40) return 3;
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
-  drive.ResetSimulation(frc::Pose2d{});
-  meco::sim::DriveResetCoordinator reset(2);
-  bool clear = true;
-  drive.SetPoseResetCallback([&](const frc::Pose2d& pose) {
-    const auto decision = reset.OnPoseReset(pose, clear);
-    if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousAccepted)
-      drive.ResetSimulation(pose);
-    else if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousRejected)
-      drive.ResetPose(reset.PhysicalOrigin());
-  });
-  reset.BeginPhysicalReset(frc::Pose2d{});
-  drive.ResetSimulation(frc::Pose2d{});
-  reset.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
-  if (reset.EndAutonomousSchedule() || reset.Ready()) return 52;
-  auto initial = drive.SimulationTruth();
-  if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
-  for (int i=0; i<2; ++i) {
-    frc::sim::StepTiming(.02_s);
-    drive.SimulationPeriodic();
-    auto t = drive.SimulationTruth();
-    if (!t) return 54;
-    auto pose = reset.Advance(frc::Pose2d{units::meter_t{t->x}, units::meter_t{t->y}, frc::Rotation2d{units::radian_t{t->yaw}}});
-    if ((i == 0 && pose) || (i == 1 && !pose)) return 55;
-    if (pose) drive.ResetPose(*pose);
-  }
-  if (!reset.Ready()) return 56;
-  clear = false;
-  reset.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
-  if (!reset.EndAutonomousSchedule()) return 57;
-  auto afterBlocked = drive.SimulationTruth();
-  if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
-  drive.SetPoseResetCallback({});
   drive.ResetSimulation(frc::Pose2d{});
   base::sim::PieceSpec piece;
   piece.pose.position = {4.0, 2.0, 0.6};
@@ -297,6 +339,8 @@ int main() {
                                         units::radians_per_second_t{0.0}});
   meco::sim::SimulationPower power({18, 11, 1.6, 0.02});
   auto startPractice = meco::sim::StartPracticeMatch();
+  auto optionalPractice = meco::sim::TryStartPracticeMatch();
+  if (!optionalPractice) return 64;
   bool clockAdvancedOnce = true;
   for (int step = 0; step < 50; ++step) {
     const double before = base::simulation::GetSimulationRuntime().Time();
