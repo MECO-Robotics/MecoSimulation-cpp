@@ -37,7 +37,10 @@ loop to decouple HAL joystick packet publication from SimGUI redraw frequency.
 module contact loads; applications do not need to replace hardware feedback code.
 
 `SimulatedPieceSensor.h` injects typed observations into MecoBase perception;
-native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/autodrive.md).
+`SimulatedPieceSensorBridge` owns the sensor and a latest-frame mailbox for one
+injected IO consumer. Update it on the simulation thread with the current mount,
+truth pose, pieces, obstacles, timestamp, and sequence; reset clears a pending
+frame. Native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/autodrive.md).
 
 `PracticeMatchController.h` provides desktop-only NT practice sequencing and
 robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).
