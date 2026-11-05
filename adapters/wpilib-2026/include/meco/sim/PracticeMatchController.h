@@ -12,8 +12,8 @@ struct PracticeMatchProfile {
 // The returned command may run while disabled.
 frc2::CommandPtr StartPracticeMatch();
 // Return a practice command only for live desktop simulation. Recorded replay
-// and real robots never receive the command. Replay is initialized before the
-// decision so the caller need not select a runtime mode.
+// and real robots never receive the command. A requested replay is initialized
+// before the decision so the caller need not select a runtime mode.
 std::optional<frc2::CommandPtr> TryStartPracticeMatch();
 // Desktop only. Call Update once per robot period. No physics or clock stepping.
 class PracticeMatchController {

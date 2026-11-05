@@ -14,6 +14,7 @@
 #include <networktables/StringTopic.h>
 #include <atomic>
 #include <cmath>
+#include <cstdlib>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
@@ -168,7 +169,9 @@ frc2::CommandPtr StartPracticeMatch() {
 }
 std::optional<frc2::CommandPtr> TryStartPracticeMatch() {
   if (!frc::RobotBase::IsSimulation()) return std::nullopt;
-  base::replay::InitializeFromEnvironment();
+  const char* input = std::getenv("FRC_REPLAY_LOG");
+  if (!base::replay::Active() && input && *input)
+    base::replay::InitializeFromEnvironment();
   if (base::replay::Active()) return std::nullopt;
   return StartPracticeMatch();
 }
