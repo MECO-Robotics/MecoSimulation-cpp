@@ -260,36 +260,38 @@ int main() {
   // Exercise shared scene ownership, reset settling, and a blocked auto pose
   // through the actual Drive and simulation adapter.
   {
+  base::Drive sceneDrive(config, makeIO());
   bool clear = true;
   int sensorResets = 0;
-  meco::sim::DriveScene scene(drive, {.fieldCollidersEnabled=false, .feedbackLoops=2,
+  meco::sim::DriveScene scene(sceneDrive, {.fieldCollidersEnabled=false, .feedbackLoops=2,
       .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; },
       .resetSensors=[&] { ++sensorResets; }});
   scene.Reset(frc::Pose2d{});
   scene.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  sceneDrive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
   if (scene.EndAutonomousSchedule() || scene.Ready() || sensorResets != 1) return 52;
-  auto initial = drive.SimulationTruth();
+  auto initial = sceneDrive.SimulationTruth();
   if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
   for (int i=0; i<2; ++i) {
     frc::sim::StepTiming(.02_s);
-    drive.SimulationPeriodic();
+    sceneDrive.SimulationPeriodic();
     if (!scene.Update() || scene.Ready() != (i == 1)) return 55;
   }
   // Enable clearance rejection using an enabled but empty field.
-  drive.SetPoseResetCallback({});
+  sceneDrive.SetPoseResetCallback({});
   }
   {
+  base::Drive sceneDrive(config, makeIO());
   bool clear = false;
-  meco::sim::DriveScene scene(drive, {.fieldCollidersEnabled=true, .feedbackLoops=2,
+  meco::sim::DriveScene scene(sceneDrive, {.fieldCollidersEnabled=true, .feedbackLoops=2,
       .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; }, .resetSensors={}});
   scene.Reset(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
   scene.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
+  sceneDrive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
   if (!scene.EndAutonomousSchedule()) return 57;
-  auto afterBlocked = drive.SimulationTruth();
+  auto afterBlocked = sceneDrive.SimulationTruth();
   if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
-  drive.SetPoseResetCallback({});
+  sceneDrive.SetPoseResetCallback({});
   }
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
