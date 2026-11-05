@@ -20,7 +20,7 @@ headers; the matching Base vendordep supplies `base/...` headers.
 box plates pitched around the field Y axis. `TerrainBoundaries` splits a path
 at plate edges, and `TerrainGrade` samples its signed grade at the segment
 midpoint. Applications choose colliders, obstacle margins, and terrain policy.
-`ColliderRectangles` projects unrotated boxes intersecting a caller-supplied
+`meco/sim/ColliderNavigation.h` provides `ColliderRectangles`, which projects unrotated boxes intersecting a caller-supplied
 height interval into field-coordinate rectangles; other shapes are omitted.
 
 ## Find a guide

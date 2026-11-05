@@ -120,6 +120,7 @@ model {
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/BatterySupply.h>
+#include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
@@ -182,6 +183,7 @@ int main() {
   vision.Reset();
   visionIo->UpdateInputs(visionInputs);
   if (visionInputs.connected || !visionInputs.observations.empty()) return 47;
+  if (!meco::sim::ColliderRectangles({}, 0, 1).empty()) return 51;
   if (!base::sim::IsFootprintClear(2, 2, 0, .4, .4, 1, 10, 8, 0, {})) return 33;
   const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
       {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
