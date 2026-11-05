@@ -2,6 +2,9 @@
 
 #include <base/Drive.h>
 #include <base/sim/SimulationTuning.h>
+#include <array>
+#include <cstddef>
+#include <stdexcept>
 
 namespace meco::sim
 {
@@ -16,6 +19,8 @@ inline base::DriveConfig ConfigureDriveTuning(base::DriveConfig config, Tuning t
 {
     if (tuning == Tuning::Configured)
         return config;
+    if (tuning != Tuning::Automatic)
+        throw std::invalid_argument("Invalid simulation tuning selection");
 
     std::array<base::sim::ModuleLocation, 4> locations{};
     for (std::size_t i = 0; i < locations.size(); ++i)
