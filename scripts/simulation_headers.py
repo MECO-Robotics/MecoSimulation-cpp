@@ -19,6 +19,7 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/BatterySupply.h",
     "meco/sim/ColliderNavigation.h",
     "meco/sim/SimulationPower.h",
+    "meco/sim/SimulationLifecycle.h",
     "meco/sim/SimulationNetwork.h",
     "meco/sim/SimulationPose.h",
     "meco/sim/SimulatedVision.h",

@@ -127,6 +127,7 @@ model {
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
+#include <meco/sim/SimulationLifecycle.h>
 #include <meco/sim/SimulatedVision.h>
 #include <meco/sim/SimulatedVisionSource.h>
 #include <meco/sim/IdealVisionObservation.h>
@@ -216,6 +217,14 @@ int main() {
   const std::vector<base::sim::BodySpec> blockers{blocker};
   if (sensor.Observe(frc::Pose3d{},points,blockers,1_s)) return 41;
   if (!HAL_Initialize(500, 0)) return 2;
+  {
+    meco::sim::SimulationLifecycle lifecycle({18, 11, 1.6, .02, 20, 3, 140});
+    lifecycle.Initialize();
+    const auto before = base::simulation::GetSimulationRuntime().Time();
+    lifecycle.BeforeScheduler(); lifecycle.AfterScheduler();
+    lifecycle.BeforeScene(); lifecycle.AfterScene();
+    if (base::simulation::GetSimulationRuntime().Time() != before) return 60;
+  }
   // Verify the packaged implementation, including both station mappings.
   auto practiceNt=nt::NetworkTableInstance::Create();
   practiceNt.StartLocal();

@@ -51,6 +51,12 @@ frame. Native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../.
 `PracticeMatchController.h` provides desktop-only NT practice sequencing and
 robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).
 
+`SimulationLifecycle.h` groups network setup, configurable battery state,
+practice sequencing, scheduler latency probes and Driver Station packets.
+Call its hooks at the existing scheduler and simulation-loop boundaries. It
+does not step physics or advance the clock, and skips power, practice and
+simulated Driver Station packet updates while replay is active.
+
 `SimulationPower.h` adds optional charge integration, brownout counting and
 power/physics-clock telemetry on top of the battery supply helper. Construct
 one `SimulationPower` with pack capacity, discharge-curve voltages and internal
