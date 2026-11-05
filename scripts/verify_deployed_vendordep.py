@@ -30,12 +30,17 @@ def fetch(url: str, attempts: int, delay: float) -> bytes:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--site-url", required=True, help="GitHub Pages root, with or without trailing slash")
+    parser.add_argument("--expected-package", type=Path, help="Compare deployment against an already validated tested package")
     parser.add_argument("--attempts", type=int, default=12)
     parser.add_argument("--delay", type=float, default=10)
     args = parser.parse_args()
     site = args.site_url.rstrip("/")
     descriptor_bytes = fetch(f"{site}/MecoSimulation.json", args.attempts, args.delay)
     descriptor = json.loads(descriptor_bytes)
+    if args.expected_package:
+        package = args.expected_package.resolve()
+        if (package / "MecoSimulation.json").read_bytes() != descriptor_bytes:
+            raise SystemExit("Deployed descriptor differs from the tested package")
     source_descriptor = fetch(descriptor["jsonUrl"], args.attempts, args.delay)
     if json.loads(source_descriptor) != descriptor:
         raise SystemExit("The raw vendordep descriptor differs from the deployed Pages descriptor")
@@ -43,6 +48,17 @@ def main() -> None:
     checksums = json.loads(checksum_bytes)
     maven_url = descriptor["mavenUrls"][0].rstrip("/")
     expected = checksums.get("artifacts", {})
+    if args.expected_package:
+        tested = json.loads((package / "SHA256SUMS.json").read_text(encoding="utf-8"))
+        if (checksums.get("version") != tested.get("version") or
+                checksums.get("sourceCommit") != tested.get("sourceCommit")):
+            raise SystemExit("Deployed version or source differs from the tested package")
+        tested_artifacts = tested.get("artifacts", {})
+        if not tested_artifacts:
+            raise SystemExit("Tested package has no Maven artifacts")
+        for path, digest in tested_artifacts.items():
+            if not path.startswith("maven/") or expected.get(path) != digest:
+                raise SystemExit(f"Deployed artifact does not match the tested package: {path}")
     if not expected:
         raise SystemExit("Published checksum manifest contains no Maven artifacts")
     for relative_path, digest in expected.items():
