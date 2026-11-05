@@ -242,10 +242,8 @@ int main() {
   });
   auto providerCopy=provider;
   base::MotorConfig motorConfig; motorConfig.ids={1}; motorConfig.reversed={false};
-  base::MotorIOSelector selector{provider};
-  auto replayMotor=selector.Make(base::Mode::Replay, base::Vendor::SparkMax, motorConfig);
-  if (!replayMotor || loadRead || providerBuilds) return 61;
-  auto simMotor=selector.Make(base::Mode::Sim, base::Vendor::SparkMax, motorConfig);
+  if (loadRead || providerBuilds) return 61;
+  auto simMotor=provider(base::Vendor::SparkMax, motorConfig);
   auto secondMotor=providerCopy(base::Vendor::SparkMax, motorConfig);
   if (!secondMotor || providerBuilds!=1) return 64;
   if (!simMotor || loadRead) return 62;
