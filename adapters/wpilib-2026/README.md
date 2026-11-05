@@ -38,7 +38,7 @@ module contact loads; applications do not need to replace hardware feedback code
 
 `SimulationNetwork.h` provides `ConfigureSimulationNetwork()` for isolated
 desktop runs. When `FRC_SIM_NT_PORT` is set to an integer from 1024 through
-65535, it restarts NT on loopback at that NT4 port with NT3 disabled. Call it
+65535, it restarts NT on loopback with that NT4 port and NT3 port zero. Call it
 once before publishing; an unset variable leaves NT server configuration alone.
 Invalid values throw before changing the server.
 

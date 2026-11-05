@@ -9,7 +9,7 @@
 namespace meco::sim
 {
 // If FRC_SIM_NT_PORT is set, restart the NT server on loopback with that NT4
-// port and no NT3 port. Leave the server untouched when unset. Call once at
+// port and port3 set to zero. Leave the server untouched when unset. Call once at
 // startup before publishing topics. Invalid ports throw without stopping it.
 inline void ConfigureSimulationNetwork(
     nt::NetworkTableInstance instance = nt::NetworkTableInstance::GetDefault())
