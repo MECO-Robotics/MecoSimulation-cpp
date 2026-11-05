@@ -66,3 +66,9 @@ fix status into latest-sample `InjectedVisionIO` observations. The caller owns
 visibility and alignment policy, camera transforms, uncertainty and reset timing.
 `Reset` clears pending observations and sensor status. The IO shares ownership of
 its sample buffer, so it remains valid if the source handle is destroyed.
+
+`DriveResetCoordinator` tracks an autonomous pose-reset callback and feedback
+settling without driving the robot itself. The application supplies clearance
+policy, performs accepted physics resets, cancels blocked autonomous commands,
+and advances the coordinator with actual physics truth once per scene period.
+It returns the odometry reconciliation pose after the configured feedback loops.
