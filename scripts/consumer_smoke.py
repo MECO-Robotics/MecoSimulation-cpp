@@ -120,6 +120,7 @@ model {
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
 #include <meco/sim/DriveResetCoordinator.h>
+#include <meco/sim/DriveScene.h>
 #include <meco/sim/BatterySupply.h>
 #include <meco/sim/ColliderNavigation.h>
 #include <meco/sim/LoadedMotorIO.h>
@@ -247,46 +248,46 @@ int main() {
   };
   base::Drive drive(config, makeIO());
   base::Drive secondDrive(config, makeIO());
+  // Exercise shared scene ownership, reset settling, and a blocked auto pose
+  // through the actual Drive and simulation adapter.
+  {
+  bool clear = true;
+  int sensorResets = 0;
+  meco::sim::DriveScene scene(drive, {.fieldCollidersEnabled=false, .feedbackLoops=2,
+      .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; },
+      .resetSensors=[&] { ++sensorResets; }});
+  scene.Reset(frc::Pose2d{});
+  scene.BeginAutonomousSchedule();
+  drive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  if (scene.EndAutonomousSchedule() || scene.Ready() || sensorResets != 1) return 52;
+  auto initial = drive.SimulationTruth();
+  if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
+  for (int i=0; i<2; ++i) {
+    frc::sim::StepTiming(.02_s);
+    drive.SimulationPeriodic();
+    if (!scene.Update() || scene.Ready() != (i == 1)) return 55;
+  }
+  // Enable clearance rejection using an enabled but empty field.
+  drive.SetPoseResetCallback({});
+  }
+  {
+  bool clear = false;
+  meco::sim::DriveScene scene(drive, {.fieldCollidersEnabled=true, .feedbackLoops=2,
+      .colliders={}, .contact={}, .clearStartingPose=[&](const frc::Pose2d&) { return clear; }, .resetSensors={}});
+  scene.Reset(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  scene.BeginAutonomousSchedule();
+  drive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
+  if (!scene.EndAutonomousSchedule()) return 57;
+  auto afterBlocked = drive.SimulationTruth();
+  if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
+  drive.SetPoseResetCallback({});
+  }
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
   if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w) ||
       base::sim::fields::rebuilt2026::FieldColliders().size() != 40) return 3;
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
-  drive.ResetSimulation(frc::Pose2d{});
-  meco::sim::DriveResetCoordinator reset(2);
-  bool clear = true;
-  drive.SetPoseResetCallback([&](const frc::Pose2d& pose) {
-    const auto decision = reset.OnPoseReset(pose, clear);
-    if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousAccepted)
-      drive.ResetSimulation(pose);
-    else if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousRejected)
-      drive.ResetPose(reset.PhysicalOrigin());
-  });
-  reset.BeginPhysicalReset(frc::Pose2d{});
-  drive.ResetSimulation(frc::Pose2d{});
-  reset.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
-  if (reset.EndAutonomousSchedule() || reset.Ready()) return 52;
-  auto initial = drive.SimulationTruth();
-  if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
-  for (int i=0; i<2; ++i) {
-    frc::sim::StepTiming(.02_s);
-    drive.SimulationPeriodic();
-    auto t = drive.SimulationTruth();
-    if (!t) return 54;
-    auto pose = reset.Advance(frc::Pose2d{units::meter_t{t->x}, units::meter_t{t->y}, frc::Rotation2d{units::radian_t{t->yaw}}});
-    if ((i == 0 && pose) || (i == 1 && !pose)) return 55;
-    if (pose) drive.ResetPose(*pose);
-  }
-  if (!reset.Ready()) return 56;
-  clear = false;
-  reset.BeginAutonomousSchedule();
-  drive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
-  if (!reset.EndAutonomousSchedule()) return 57;
-  auto afterBlocked = drive.SimulationTruth();
-  if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
-  drive.SetPoseResetCallback({});
   drive.ResetSimulation(frc::Pose2d{});
   base::sim::PieceSpec piece;
   piece.pose.position = {4.0, 2.0, 0.6};
