@@ -63,7 +63,10 @@ Base package alone remains sufficient for roboRIO builds.
 Simulation adds Linux and Windows desktop libraries, so desktop projects need
 both vendordeps. Do not add the Simulation package to a different WPILib year.
 
-The release workflow verifies the immutable 2026.0.16 release archives and
+When native build inputs remain unchanged from 2026.0.20, the release workflow
+can reuse its published native archives after verifying their source, provenance,
+and checksums. The updated headers are still checked in clean consumers. If that
+check does not apply, the workflow verifies the immutable 2026.0.16 release archives and
 reuses only their unchanged Jolt/core objects. It rebuilds the four WPILib
 adapter objects against the selected Base headers, checks every retained core
 object against the pinned release archive, and uses the published matching
