@@ -10,6 +10,8 @@
 #include <random>
 #include <span>
 #include <stdexcept>
+#include <memory>
+#include <utility>
 
 namespace meco::sim {
 struct PieceSensorConfig {
@@ -99,5 +101,34 @@ class SimulatedPieceSensor {
  private:
     PieceSensorConfig config_;
     std::mt19937 random_;
+};
+
+// Connect one synthetic camera to an ObjectPerception IO. Update on the robot
+// simulation thread; each update replaces any unread frame. ReadFrame consumes
+// the latest frame once. The IO may outlive this bridge; it retains its pending
+// frame but no further updates occur. One IO consumer should read each bridge.
+class SimulatedPieceSensorBridge {
+ public:
+    explicit SimulatedPieceSensorBridge(PieceSensorConfig config)
+        : sensor_(std::move(config)), frame_(std::make_shared<std::optional<base::ObjectDetectionFrame>>()) {}
+
+    std::unique_ptr<base::ObjectDetectionIO> MakeIO() const {
+        return std::make_unique<base::InjectedObjectDetectionIO>(
+            [frame = frame_] { return std::exchange(*frame, std::nullopt); });
+    }
+
+    const base::ObjectDetectionFrame& Update(const frc::Pose3d& robot, const frc::Transform3d& mount,
+            std::span<const frc::Translation3d> pieces,
+            std::span<const base::sim::BodySpec> obstacles, units::second_t timestamp, uint64_t sequence) {
+        sensor_.SetMount(mount);
+        *frame_ = sensor_.ObserveFrame(robot, pieces, obstacles, timestamp, sequence);
+        return **frame_;
+    }
+
+    void Reset() { frame_->reset(); }
+
+ private:
+    SimulatedPieceSensor sensor_;
+    std::shared_ptr<std::optional<base::ObjectDetectionFrame>> frame_;
 };
 }

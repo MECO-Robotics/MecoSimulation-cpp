@@ -1,4 +1,6 @@
 #include "meco/sim/PracticeMatchController.h"
+#include <frc2/command/Commands.h>
+#include <frc/simulation/DriverStationSim.h>
 #ifndef __FRC_ROBORIO__
 #include <frc/RobotBase.h>
 #include <frc/Timer.h>
@@ -145,6 +147,24 @@ struct PracticeMatchController::Impl {
   }
   ~Impl() {if(running) Finish("aborted","controller-destroyed");callbacks.clear();}
 };
+frc2::CommandPtr StartPracticeMatch() {
+  return frc2::cmd::RunOnce([] {
+    const char* station = "Blue1";
+    switch (frc::sim::DriverStationSim::GetAllianceStationId()) {
+      case HAL_AllianceStationID_kRed1: station = "Red1"; break;
+      case HAL_AllianceStationID_kRed2: station = "Red2"; break;
+      case HAL_AllianceStationID_kRed3: station = "Red3"; break;
+      case HAL_AllianceStationID_kBlue2: station = "Blue2"; break;
+      case HAL_AllianceStationID_kBlue3: station = "Blue3"; break;
+      default: break;
+    }
+    auto nt = nt::NetworkTableInstance::GetDefault();
+    nt.GetTable("/Sim/Practice")->GetEntry("Config/AllianceStation").SetString(station);
+    static auto command = nt::NetworkTableInstance::GetDefault()
+        .GetStringTopic("/Sim/Practice/Command").Publish({.keepDuplicates = true});
+    command.Set("start");
+  }).IgnoringDisable(true);
+}
 PracticeMatchController::PracticeMatchController(PracticeMatchProfile p,nt::NetworkTableInstance nt):impl_(std::make_unique<Impl>(p,nt)) {}
 PracticeMatchController::~PracticeMatchController()=default;
 void PracticeMatchController::Update() {impl_->Update();}

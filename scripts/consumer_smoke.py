@@ -119,9 +119,15 @@ model {
 #include <base/PortableSwerve.h>
 #include <base/SimulationRuntime.h>
 #include <meco/sim/DriveSimulationAdapter.h>
+#include <meco/sim/DriveResetCoordinator.h>
 #include <meco/sim/BatterySupply.h>
+#include <meco/sim/ColliderNavigation.h>
+#include <meco/sim/LoadedMotorIO.h>
+#include <meco/sim/SimulationPower.h>
+#include <meco/sim/SimulationNetwork.h>
 #include <meco/sim/SimulationPose.h>
 #include <meco/sim/SimulatedVision.h>
+#include <meco/sim/SimulatedVisionSource.h>
 #include <meco/sim/IdealVisionObservation.h>
 #include <meco/sim/ParticleContacts.h>
 #include <meco/sim/ParticleFieldContacts.h>
@@ -153,6 +159,10 @@ class Gyro final : public base::SwerveGyroIO {
 
 int main() {
   using namespace units::literals;
+  meco::sim::ConfigureSimulationNetwork();
+  const auto motor = meco::sim::LoadedMotorModelFromStallAndFreeSpeed(12, 120, 3, 6000);
+  if (std::abs(motor.resistanceOhms - .1) > 1e-12 ||
+      std::abs(motor.torqueConstantNmPerAmp - .025) > 1e-12) return 48;
   const auto floor = meco::sim::FloorReferencedRobotPose(
       frc::Pose3d{0_m, 0_m, .2_m, frc::Rotation3d{}}, .2_m);
   if (std::abs(floor.Z().value()) > 1e-12) return 30;
@@ -162,6 +172,19 @@ int main() {
   if (meco::sim::VisibleTags(floor, frc::Transform3d{}, tags,
                            60_deg, 50_deg, 3_m) != std::vector<int>{1}) return 31;
   if (!meco::sim::MakeIdealVisionObservation(floor, 0_s, tags, true, 1_m, {1, 1, 1})) return 32;
+  meco::sim::SimulatedVisionSource vision;
+  auto visionIo = vision.MakeIO();
+  vision.Update(floor, 1_s, tags, true, 1_m, {1, 1, 1}, true, true, true);
+  base::VisionInputs visionInputs;
+  visionIo->UpdateInputs(visionInputs);
+  if (!visionInputs.connected || !visionInputs.aligned || visionInputs.observations.size() != 1 ||
+      visionInputs.observations[0].timestamp != 1_s) return 45;
+  visionIo->UpdateInputs(visionInputs);
+  if (!visionInputs.connected || !visionInputs.observations.empty()) return 46;
+  vision.Reset();
+  visionIo->UpdateInputs(visionInputs);
+  if (visionInputs.connected || !visionInputs.observations.empty()) return 47;
+  if (!meco::sim::ColliderRectangles({}, 0, 1).empty()) return 51;
   if (!base::sim::IsFootprintClear(2, 2, 0, .4, .4, 1, 10, 8, 0, {})) return 33;
   const base::sim::TuningInputs tuning{50, 5, 1, .05, 6, 40, .02,
       {{{.3, .3}, {.3, -.3}, {-.3, .3}, {-.3, -.3}}}, 1, 1};
@@ -176,6 +199,15 @@ int main() {
   sensorConfig.dropout=0; sensorConfig.angularNoise=0;
   meco::sim::SimulatedPieceSensor sensor(sensorConfig);
   const std::vector<frc::Translation3d> points{{2_m,0_m,0_m},{-1_m,0_m,0_m}};
+  meco::sim::SimulatedPieceSensorBridge bridge(sensorConfig);
+  auto pieceIo = bridge.MakeIO();
+  bridge.Update(frc::Pose3d{}, frc::Transform3d{}, points, {}, 1_s, 7);
+  auto pieceFrame = pieceIo->ReadFrame();
+  if (!pieceFrame || pieceFrame->sequence != 7 || pieceFrame->detections.size() != 1 ||
+      pieceIo->ReadFrame()) return 49;
+  bridge.Update(frc::Pose3d{}, frc::Transform3d{}, points, {}, 1_s, 8);
+  bridge.Reset();
+  if (pieceIo->ReadFrame()) return 50;
   const auto ray=sensor.Observe(frc::Pose3d{}, points, {}, 1_s);
   if (!ray || std::abs(ray->yawDegrees)>1e-9) return 40;
   base::sim::BodySpec blocker;
@@ -222,6 +254,40 @@ int main() {
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
   drive.ResetSimulation(frc::Pose2d{});
+  meco::sim::DriveResetCoordinator reset(2);
+  bool clear = true;
+  drive.SetPoseResetCallback([&](const frc::Pose2d& pose) {
+    const auto decision = reset.OnPoseReset(pose, clear);
+    if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousAccepted)
+      drive.ResetSimulation(pose);
+    else if (decision == meco::sim::DriveResetCoordinator::PoseReset::autonomousRejected)
+      drive.ResetPose(reset.PhysicalOrigin());
+  });
+  reset.BeginPhysicalReset(frc::Pose2d{});
+  drive.ResetSimulation(frc::Pose2d{});
+  reset.BeginAutonomousSchedule();
+  drive.ResetPose(frc::Pose2d{1_m, 1_m, frc::Rotation2d{}});
+  if (reset.EndAutonomousSchedule() || reset.Ready()) return 52;
+  auto initial = drive.SimulationTruth();
+  if (!initial || std::abs(initial->x - 1) > .01 || std::abs(initial->y - 1) > .01) return 53;
+  for (int i=0; i<2; ++i) {
+    frc::sim::StepTiming(.02_s);
+    drive.SimulationPeriodic();
+    auto t = drive.SimulationTruth();
+    if (!t) return 54;
+    auto pose = reset.Advance(frc::Pose2d{units::meter_t{t->x}, units::meter_t{t->y}, frc::Rotation2d{units::radian_t{t->yaw}}});
+    if ((i == 0 && pose) || (i == 1 && !pose)) return 55;
+    if (pose) drive.ResetPose(*pose);
+  }
+  if (!reset.Ready()) return 56;
+  clear = false;
+  reset.BeginAutonomousSchedule();
+  drive.ResetPose(frc::Pose2d{5_m, 5_m, frc::Rotation2d{}});
+  if (!reset.EndAutonomousSchedule()) return 57;
+  auto afterBlocked = drive.SimulationTruth();
+  if (!afterBlocked || std::abs(afterBlocked->x - 5) < 1 || std::abs(afterBlocked->y - 5) < 1) return 58;
+  drive.SetPoseResetCallback({});
+  drive.ResetSimulation(frc::Pose2d{});
   base::sim::PieceSpec piece;
   piece.pose.position = {4.0, 2.0, 0.6};
   piece.velocity = {3.0, 0.0, 0.0};
@@ -229,6 +295,8 @@ int main() {
   const auto pieceId = arena.Spawn(piece);
   drive.RunVelocity(frc::ChassisSpeeds{units::meters_per_second_t{1.0}, units::meters_per_second_t{0.0},
                                         units::radians_per_second_t{0.0}});
+  meco::sim::SimulationPower power({18, 11, 1.6, 0.02});
+  auto startPractice = meco::sim::StartPracticeMatch();
   bool clockAdvancedOnce = true;
   for (int step = 0; step < 50; ++step) {
     const double before = base::simulation::GetSimulationRuntime().Time();
@@ -236,7 +304,7 @@ int main() {
     drive.SimulationPeriodic();
     const double afterFirst = base::simulation::GetSimulationRuntime().Time();
     secondDrive.SimulationPeriodic();
-    meco::sim::UpdateBatterySupply(base::simulation::GetSimulationRuntime());
+    power.Update(base::simulation::GetSimulationRuntime());
     const double afterSecond = base::simulation::GetSimulationRuntime().Time();
     clockAdvancedOnce = clockAdvancedOnce && std::abs(afterFirst - before - 0.02) < 1e-9 &&
                         afterSecond == afterFirst;

@@ -20,6 +20,10 @@ simulated motor needs a changing output load. Supply one motor's SI resistance,
 torque constant, and speed constant in `LoadedMotorModel`, plus a callback that
 returns the current opposing output torque in N m. The callback is sampled once
 per robot-period update; its captured season state must outlive the returned IO.
+`LoadedMotorModelFromStallAndFreeSpeed` derives those constants from one motor's
+nominal voltage, stall current, stall torque, and free speed, using an ideal
+zero-current free speed. Configure output inertia and any other model settings
+on the returned model before constructing the IO.
 The model defaults use a 0.0002 s integration substep, 1 s maximum update,
 0.0001 N m/(rad/s) viscous drag, and 0.01 rad/s load direction threshold.
 Game-specific torque calculations remain in the consuming robot project.
@@ -32,8 +36,39 @@ loop to decouple HAL joystick packet publication from SimGUI redraw frequency.
 `DriveSimulationSession::PhysicsTruth()` returns full physical orientation and
 module contact loads; applications do not need to replace hardware feedback code.
 
+`SimulationNetwork.h` provides `ConfigureSimulationNetwork()` for isolated
+desktop runs. When `FRC_SIM_NT_PORT` is set to an integer from 1024 through
+65535, it restarts NT on loopback with that NT4 port and NT3 port zero. Call it
+once before publishing; an unset variable leaves NT server configuration alone.
+Invalid values throw before changing the server.
+
 `SimulatedPieceSensor.h` injects typed observations into MecoBase perception;
-native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/autodrive.md).
+`SimulatedPieceSensorBridge` owns the sensor and a latest-frame mailbox for one
+injected IO consumer. Update it on the simulation thread with the current mount,
+truth pose, pieces, obstacles, timestamp, and sequence; reset clears a pending
+frame. Native AutoDrive planning/control lives in MecoBase. See [AutoDrive](../../docs/autodrive.md).
 
 `PracticeMatchController.h` provides desktop-only NT practice sequencing and
 robot-visible DS/FMS inputs. See [practice control](../../docs/practice-mode.md).
+
+`SimulationPower.h` adds optional charge integration, brownout counting and
+power/physics-clock telemetry on top of the battery supply helper. Construct
+one `SimulationPower` with pack capacity, discharge-curve voltages and internal
+resistance, then call `Update(runtime)` once after each robot period. Keep the
+instance alive through scene resets if battery charge should persist. Its simple
+square-root discharge curve is an estimate, not battery characterization.
+
+`StartPracticeMatch()` returns a command that starts the practice controller
+using the simulated Driver Station alliance and can run while disabled.
+
+`SimulatedVisionSource` turns caller-supplied field-relative robot truth and
+fix status into latest-sample `InjectedVisionIO` observations. The caller owns
+visibility and alignment policy, camera transforms, uncertainty and reset timing.
+`Reset` clears pending observations and sensor status. The IO shares ownership of
+its sample buffer, so it remains valid if the source handle is destroyed.
+
+`DriveResetCoordinator` tracks an autonomous pose-reset callback and feedback
+settling without driving the robot itself. The application supplies clearance
+policy, performs accepted physics resets, cancels blocked autonomous commands,
+and advances the coordinator with actual physics truth once per scene period.
+It returns the odometry reconciliation pose after the configured feedback loops.
