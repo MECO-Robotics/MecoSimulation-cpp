@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from reuse_simulation_core import verify_retained_core_provenance
 from reuse_published_binary import verify_provenance as verify_reused_binary
+from validate_job_deadlines import require_timing
 
 REQUIRED_JOBS = {
     'resolve-base', 'base-vendor-cache', 'build (ubuntu-24.04, linuxx86-64)',
@@ -24,9 +25,12 @@ REQUIRED_JOBS = {
 def validate(run, jobs, manifest, tag_commit, built_commit, descriptor, tagged_descriptor, base_commit):
     if run.get('event') != 'pull_request' or run.get('status') != 'completed' or run.get('conclusion') != 'success':
         raise ValueError('Package source run is not a successful pull request run')
-    successful = {j['name'] for j in jobs if j.get('status') == 'completed' and j.get('conclusion') == 'success'}
-    if not REQUIRED_JOBS <= successful:
-        raise ValueError('Package source run lacks required successful platform and consumer jobs')
+    required = [j for j in jobs if j.get('name') in REQUIRED_JOBS]
+    if (len(required) != len(REQUIRED_JOBS) or {j['name'] for j in required} != REQUIRED_JOBS or
+            any(j.get('status') != 'completed' or j.get('conclusion') != 'success' for j in required)):
+        raise ValueError('Package source run lacks uniquely identified successful required jobs')
+    for job in required:
+        require_timing(job)
     if descriptor != tagged_descriptor or descriptor.get('version') != manifest.get('version'):
         raise ValueError('Package descriptor differs from the release tag')
     source = manifest.get('sourceCommit')

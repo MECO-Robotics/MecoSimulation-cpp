@@ -90,15 +90,22 @@ if (baseConsumerMaven) {
 }
 tasks.register('warmConsumerDependencies') {
     doLast {
-        def resolved = 0
-        def prefix = "consumer${providers.gradleProperty('warmConfiguration').get().toLowerCase()}Executable_uber"
-        configurations.findAll { it.canBeResolved && it.name.startsWith(prefix) &&
-            (it.name.endsWith('uberheaders') || it.name.endsWith('uberlink') || it.name.endsWith('uberruntime')) }.each { dependencyConfiguration ->
-            println "Warming consumer configuration: ${dependencyConfiguration.name}"
-            resolved += dependencyConfiguration.files.size()
+        def prefix = "consumer${providers.gradleProperty('warmConfiguration').get().toLowerCase()}Executable_uber".toString()
+        def expected = ['headers', 'link', 'runtime'].collect { prefix + it } as Set
+        def selected = configurations.findAll { it.canBeResolved && it.name in expected }
+        if ((selected.collect { it.name } as Set) != expected)
+            throw new GradleException("Missing native consumer dependency configurations: ${expected - (selected.collect { it.name } as Set)}")
+        selected.each { dependencyConfiguration ->
+            def files = dependencyConfiguration.files
+            if (files.empty) throw new GradleException("Empty consumer dependency configuration: ${dependencyConfiguration.name}")
+            println "Warmed ${dependencyConfiguration.name}: ${files.size()} artifacts"
+            if (dependencyConfiguration.name == prefix + 'headers') {
+                def paths = files.collect { it.path.toLowerCase() }
+                if (!paths.any { it.contains('meco-base-cpp') } ||
+                    !paths.any { it.contains('meco-simulation-wpilib-cpp') })
+                    throw new GradleException('Missing Base or Simulation headers in warmed dependencies')
+            }
         }
-        if (!resolved) throw new GradleException('No consumer dependency artifacts were resolved')
-        println "Resolved ${resolved} consumer dependency artifacts"
     }
 }
 model {

@@ -72,6 +72,7 @@ jobs:
         configuration: [Debug, Release]
         base:
           - {ref: v2026.2.12, version: '2026.2.12'}
+          - {ref: v2026.2.15, version: '2026.2.15'}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 3
     steps:
@@ -128,6 +129,7 @@ jobs:
         configuration: [Debug, Release]
         base:
           - {ref: v2026.2.12, version: '2026.2.12'}
+          - {ref: v2026.2.15, version: '2026.2.15'}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 3
     steps:
@@ -174,3 +176,17 @@ jobs:
           BASE_VERSION: ${{ matrix.base.version }}
         shell: bash
         run: python scripts/consumer_smoke.py --target desktop --configuration '${{ matrix.configuration }}' --published --meco-base-root MecoBase-cpp --expected-base-version "$BASE_VERSION"
+
+  verify-deployed-job-deadlines:
+    if: always()
+    needs: [deployed-warm-dependencies, deployed-consumer]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Verify all deployed consumer deadlines
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/validate_job_deadlines.py

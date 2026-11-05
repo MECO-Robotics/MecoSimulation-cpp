@@ -8,12 +8,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
 from validate_tested_release import REQUIRED_JOBS, validate
 from reuse_simulation_core import sha256
+from validate_job_deadlines import validate_paired_consumers
 
 
 class TestedReleaseTest(unittest.TestCase):
     def setUp(self):
         self.run = {'event': 'pull_request', 'status': 'completed', 'conclusion': 'success', 'head_sha': 'head'}
-        self.jobs = [{'name': name, 'status': 'completed', 'conclusion': 'success'} for name in REQUIRED_JOBS]
+        self.jobs = [{'name': name, 'status': 'completed', 'conclusion': 'success',
+                      'created_at': '2026-11-05T12:00:00Z', 'completed_at': '2026-11-05T12:03:00Z'}
+                     for name in REQUIRED_JOBS]
         self.commit = {'sha': 'built', 'parents': [{'sha': 'base'}, {'sha': 'head'}], 'tree': {'sha': 'tree'}}
         self.tag = {'parents': [{'sha': 'base'}, {'sha': 'head'}], 'tree': {'sha': 'tree'}}
         pinned = json.loads((Path(__file__).resolve().parents[3] / 'scripts/fast_sim_core.json').read_text())
@@ -71,6 +74,27 @@ class TestedReleaseTest(unittest.TestCase):
         self.commit['tree'] = {'sha': 'tree'}
         self.jobs.pop()
         with self.assertRaises(ValueError): self.check()
+
+    def test_requires_queue_inclusive_deadline_and_timestamps(self):
+        self.jobs[0]['completed_at'] = '2026-11-05T12:03:01Z'
+        with self.assertRaises(ValueError): self.check()
+        self.jobs[0]['completed_at'] = None
+        with self.assertRaises(ValueError): self.check()
+        self.jobs[0]['completed_at'] = '2026-11-05T11:59:59Z'
+        with self.assertRaises(ValueError): self.check()
+
+    def test_paired_consumer_matrix_requires_all_versions_within_deadline(self):
+        jobs = [dict(name=f'{group} ({platform}, {config}, v{version}, {version})',
+                     status='completed', conclusion='success',
+                     created_at='2026-11-05T12:00:00Z', completed_at='2026-11-05T12:03:00Z')
+                for group in ('deployed-warm-dependencies', 'deployed-consumer')
+                for platform in ('ubuntu-24.04', 'windows-2022')
+                for config in ('Debug', 'Release')
+                for version in ('2026.2.12', '2026.2.15')]
+        validate_paired_consumers(jobs)
+        with self.assertRaises(ValueError): validate_paired_consumers(jobs[:-1])
+        jobs[-1]['completed_at'] = '2026-11-05T12:03:01Z'
+        with self.assertRaises(ValueError): validate_paired_consumers(jobs)
 
     def test_rejects_dirty_or_unpinned_platform(self):
         self.manifest = copy.deepcopy(self.manifest)

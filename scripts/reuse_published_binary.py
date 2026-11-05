@@ -24,10 +24,11 @@ ALLOWED = {
     'adapters/wpilib-2026/include/meco/sim/DriveTuning.h',
     'adapters/wpilib-2026/include/meco/sim/MotorSimulationFactories.h',
     'scripts/consumer_smoke.py', 'scripts/package_vendordep.py', 'scripts/simulation_headers.py',
-    'scripts/verify_vendordep.py', 'scripts/tests/test_simulation_headers.py',
+    'scripts/verify_vendordep.py', 'scripts/validate_job_deadlines.py', 'scripts/tests/test_simulation_headers.py',
     'scripts/reuse_published_binary.py', 'scripts/published_2026_0_20_manifest.json',
     'scripts/tests/test_reuse_published_binary.py', '.github/workflows/simulation.yml',
-    '.github/release/validate_tested_release.py', '.github/workflows/publish-tested-package.yml',
+    '.github/release/validate_tested_release.py', '.github/release/tests/test_validate_tested_release.py',
+    '.github/workflows/publish-tested-package.yml',
 }
 CHANGED_HEADERS = {'DriveTuning.h', 'MotorSimulationFactories.h'}
 
