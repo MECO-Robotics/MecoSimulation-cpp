@@ -4,6 +4,8 @@
 #include "meco/sim/DriveResetCoordinator.h"
 #include "meco/sim/DriveSimulationAdapter.h"
 #include "meco/sim/SimulationPose.h"
+#include <base/Replay.h>
+#include <frc/RobotBase.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/geometry/Quaternion.h>
 #include <frc/geometry/struct/Pose3dStruct.h>
@@ -107,5 +109,14 @@ class DriveScene {
   nt::StructPublisher<frc::Pose3d> pose_, bodyPose_;
   DriveSimulationSession* session_{};
 };
+
+// The configuration factory is evaluated only for live simulation. In replay
+// and on real robots no scene or simulated drivetrain adapter is created.
+template <typename ConfigurationFactory>
+std::unique_ptr<DriveScene> MakeRuntimeDriveScene(base::Drive& drive, ConfigurationFactory&& configuration) {
+  if (!base::replay::Active() && frc::RobotBase::IsSimulation())
+    return std::make_unique<DriveScene>(drive, std::invoke(std::forward<ConfigurationFactory>(configuration)));
+  return {};
+}
 } // namespace meco::sim
 #endif
