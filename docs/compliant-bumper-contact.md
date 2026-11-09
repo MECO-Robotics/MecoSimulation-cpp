@@ -120,21 +120,16 @@ material curve, wheel dimensions, and tire friction once during initialization.
 flat-ground support; progressive/damped/separated foam response and impact energy;
 rigid backing/pan blocking with static-only seam queries; finite-wheel lip support;
 airborne wheel/chassis momentum conservation; and compliant shear/reset/separation.
-The existing bump
-scenario reports legacy and compliant runs separately, including complete
-crossing, unloaded wheels, foam compression/force, and pan/backing contacts. The
-selected half-inch flush configuration must cross upright from rest at a 5.24 m/s
-command. The packaged joystick test repeats full-stick crossing and settling.
+The bump traversal test uses synthetic two-plate geometry and illustrative
+drivetrain settings to exercise rigid and compliant contact, upright crossing,
+wheel unloading, foam response, and pan/backing contacts. It is a generic model
+check, not acceptance of any season field or robot configuration.
 
 Run `simulation_benchmark --bumper-contact` from a Release CMake build. It compares
 matched repeated pressing contact, including before/Jolt/after work, after warmup.
 Targets are p99 below 4 ms and added p99 below 0.4 ms on the same host. These
 measurements do not guarantee scheduler deadlines.
 
-The release coordinate is `2026.0.11`. Release CI builds Linux and Windows
-Debug/Release archives, links clean consumers, verifies deployed checksums and
-repeats consumer checks against public Maven. For local Linux development,
-`scripts/build_local_contact_package.sh` stages matching archives and headers;
-that local build alone does not establish public release acceptance. Rebuild all
-Simulation owners when public struct layouts change. No Jolt types escape public
-headers and no MecoBase layout changes are required.
+For local Linux development, `scripts/build_local_contact_package.sh` stages
+matching archives and headers. Rebuild all Simulation owners when public struct
+layouts change. No Jolt types escape public headers.
