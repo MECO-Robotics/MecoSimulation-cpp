@@ -1,5 +1,6 @@
 #include "meco/sim/PracticeMatchController.h"
 #include <base/Replay.h>
+#include <base/Telemetry.h>
 #include <frc2/command/Commands.h>
 #include <frc/simulation/DriverStationSim.h>
 #ifndef __FRC_ROBORIO__
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <utility>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
@@ -76,9 +78,15 @@ struct PracticeMatchController::Impl {
   void Publish() {
     table->GetEntry("State").SetString(state);
     table->GetEntry("Running").SetBoolean(running);
-    table->GetEntry("RemainingSeconds").SetDouble(remaining);
-    table->GetEntry("MatchTime").SetDouble(DS::GetMatchTime());
     table->GetEntry("GameData").SetString(frc::DriverStation::GetGameSpecificMessage());
+    const double remainingValue = remaining;
+    const double matchTime = DS::GetMatchTime();
+    auto tableHandle = table;
+    base::telemetry::Post("Practice/Timing",
+      [table=std::move(tableHandle), remainingValue, matchTime]() mutable {
+        table->GetEntry("RemainingSeconds").SetDouble(remainingValue);
+        table->GetEntry("MatchTime").SetDouble(matchTime);
+      });
   }
   void Finish(const std::string& next, const std::string& reason) {
     WriteScope scope(this);
