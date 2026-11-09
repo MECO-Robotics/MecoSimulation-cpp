@@ -107,7 +107,7 @@ python3 scripts/consumer_smoke.py --target desktop --configuration Release \
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
 MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
-shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, drivetrain tuning estimates and reusable 2026 field geometry. Applications own hardware
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, and drivetrain tuning estimates. Applications own hardware
 parameters, commands, robot-specific game-piece behavior, starting-pose policy and
 telemetry presentation. Applications must not copy `base/sim` headers or replace
 Simulation archive objects.
@@ -129,8 +129,7 @@ forces on that body.
 2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
 support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
 body orientation/contact loads without adding fields to the Base ABI. Field maps
-are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
-helpers are public `meco/sim` headers. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
+helpers are public `meco/sim` headers. Season field geometry stays in the consuming robot project. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
 see the [release validation](docs/releases/2026.0.9.md).
 
 ## Native AutoDrive and practice control
@@ -344,16 +343,10 @@ The legacy adapter overload retains its rigid-contact behavior.
 `meco/sim/SimulationPose.h` provides `FloorReferencedRobotPose` with a body-local
 height offset. `meco/sim/SimulatedVision.h` provides `VisibleTags` with camera
 mount, field layout, full horizontal/vertical angles and maximum range supplied
-by the caller. These ideal geometric helpers do not model occlusion or noise;
-sensor settings and alignment policy remain application-owned.
-
-The 2026 field also exposes `ParticleFieldColliders()`, a static-box
-approximation for particle contact. Its hub walls leave the top open, unlike
-the solid chassis envelope. The WPILib adapter's `ParticleFieldContacts`
-resolves spherical particles against those boxes; use short simulation
-substeps because contact detection is discrete. Field boundaries, ramps,
-trench structures, tower and depot geometry are simplified, not a complete
-representation of the official field.
+by the caller. `meco/sim/SimulatedTagCamera.h` combines configurable tag
+visibility and an ideal observation source for one camera. Connection,
+tracking, alignment, camera mounts and calibration remain caller supplied.
+These ideal geometric helpers do not model occlusion or noise.
 
 The Base 2026.2.12 checksum snapshot in `scripts/base-2026.2.12-SHA256SUMS.json`
 is pinned to release source `660eb31` and the assembled artifact from

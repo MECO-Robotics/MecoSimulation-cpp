@@ -159,7 +159,6 @@ model {
 #include <meco/sim/DriveTuning.h>
 #include <meco/sim/SimulatedPieceSensor.h>
 #include <meco/sim/PracticeMatchController.h>
-#include <base/sim/fields/Rebuilt2026.h>
 
 int RunDriveSmoke();
 
@@ -208,7 +207,9 @@ int main() {
       retained.massKg != 62 || derived.massKg != 62) return 55;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
-  const meco::sim::ParticleFieldContacts field{base::sim::fields::rebuilt2026::ParticleFieldColliders()};
+  base::sim::BodySpec particleWall;
+  particleWall.halfExtents = {.5, .5, .5};
+  const meco::sim::ParticleFieldContacts field{{particleWall}};
   ground.push_back({{.03, 2, .5}, {-1, 0, 0}});
   field.Resolve(ground, .07, .25);
   if (ground.front().position.x < .069 || ground.front().velocity.x <= 0) return 44;
@@ -307,7 +308,6 @@ int main() {
 #include <meco/sim/FootprintNavigation.h>
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/PracticeMatchController.h>
-#include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
  public:
@@ -389,8 +389,7 @@ int RunDriveSmoke() {
   }
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
-  if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w) ||
-      base::sim::fields::rebuilt2026::FieldColliders().size() != 40) return 3;
+  if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w)) return 3;
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
   drive.ResetSimulation(frc::Pose2d{});

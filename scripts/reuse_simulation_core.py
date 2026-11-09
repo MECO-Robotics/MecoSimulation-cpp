@@ -28,9 +28,7 @@ PINNED_ADAPTER_OBJECTS = {
     "DriveHardwareSimulation",
     "PracticeMatchController",
 }
-FRC_JOLT_OBJECTS = {
-    "SimulationWorld", "RobotContactConfig", "DrivePhysics", "Arena", "Rebuilt2026"
-}
+FRC_JOLT_OBJECTS = {"SimulationWorld", "RobotContactConfig", "DrivePhysics", "Arena"}
 GROUP_PATH = "com/mecorobotics/sim/meco-simulation-wpilib-cpp"
 
 

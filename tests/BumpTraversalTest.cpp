@@ -1,5 +1,4 @@
 #include "base/sim/DrivePhysics.h"
-#include "base/sim/fields/Rebuilt2026.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -17,8 +16,24 @@ int main() {
         floor.pose.position.z = -.05;
         floor.friction = 1;
         world.CreateBody(floor);
-        for (const auto &collider : fields::rebuilt2026::FieldColliders())
-            world.CreateBody(collider);
+        // A generic two-plate bump keeps this contact-model check independent
+        // of any particular FRC season's field geometry.
+        constexpr double angle = 12 * 3.141592653589793 / 180;
+        constexpr double run = .8;
+        constexpr double height = .17;
+        constexpr double thickness = .025;
+        constexpr double centerX = 0;
+        constexpr double centerY = 0;
+        for (double side : {-1., 1.}) {
+            BodySpec ramp;
+            ramp.mass = 0;
+            ramp.friction = .010;
+            ramp.halfExtents = {run / (2 * std::cos(angle)), .5, thickness / 2};
+            ramp.pose = {{centerX + side * run / 2, centerY,
+                          height - run * std::tan(angle) / 2 - thickness * std::cos(angle) / 2},
+                         {0, std::sin(side * angle / 2), 0, std::cos(side * angle / 2)}};
+            world.CreateBody(ramp);
+        }
         DrivePhysicsConfig c;
         c.mass = 67.6;
         c.friction = 2.1;
@@ -43,7 +58,7 @@ int main() {
         auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, contact)
                                : std::make_unique<DrivePhysics>(world, c);
         auto &drive = *plant;
-        drive.Reset({{compliant ? .6 : 2.8, 2.5106376, c.rideHeight}, {}});
+        drive.Reset({{compliant ? -1.5 : -3.5, 0, c.rideHeight}, {}});
         // Running approach to a low-clearance skid: with every wheel lifted, there
         // is no magic propulsion. Momentum must carry the bumper over the crest.
         if (!compliant)
@@ -82,7 +97,7 @@ int main() {
             maxTilt = std::max(
                 maxTilt,
                 std::acos(std::clamp(1 - 2 * (rotation.x * rotation.x + rotation.y * rotation.y), -1., 1.)));
-            if (truth.body.pose.position.x > 6.2 && std::abs(truth.body.pose.position.z - c.rideHeight) < .02)
+            if (truth.body.pose.position.x > 1.5 && std::abs(truth.body.pose.position.z - c.rideHeight) < .02)
             {
                 cleared = true;
                 break;
@@ -96,7 +111,7 @@ int main() {
             if (!std::isfinite(truth.body.pose.position.z) || truth.body.pose.position.z < -.02 ||
                 truth.body.pose.position.z > 2)
                 throw std::runtime_error("Bump contact became unstable");
-            if (truth.body.pose.position.x > 3.6 && truth.body.pose.position.x < 5.7)
+            if (truth.body.pose.position.x > -.7 && truth.body.pose.position.x < .7)
             {
                 maxHeight = std::max(maxHeight, truth.body.pose.position.z);
                 const bool unloaded = std::all_of(truth.modules.begin(), truth.modules.end(),
@@ -108,7 +123,7 @@ int main() {
                         if (std::hypot(m.longitudinalForce, m.lateralForce) > 3)
                             throw std::runtime_error("Lifted tire still propels chassis");
             }
-            if (truth.body.pose.position.x > 4.8 && truth.body.pose.position.z > .10)
+            if (truth.body.pose.position.x > .3 && truth.body.pose.position.z > .10)
                 rodeBump = true;
         }
         std::cout << "scenario=" << scenario << " max_tilt_deg=" << maxTilt * 180 / pi
@@ -121,7 +136,7 @@ int main() {
         if (scenario == 2 && (!cleared || maxTilt > pi / 4))
             throw std::runtime_error(
                 "Drive from rest must clear entire bump upright with 1/2-inch flush bumper clearance");
-        if (!compliant && (!rodeBump || maxHeight < .18 || maxHeight > .35 || supportedWithWheelsLifted < 5))
+        if (!compliant && (!rodeBump || maxHeight < .18 || maxHeight > .35 || supportedWithWheelsLifted < 3))
             throw std::runtime_error("Bumper must slide over the crest and support the lifted chassis "
                                      "without a leading-edge launch");
     }

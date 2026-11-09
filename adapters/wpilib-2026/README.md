@@ -57,6 +57,11 @@ Call its hooks at the existing scheduler and simulation-loop boundaries. It
 does not step physics or advance the clock, and skips power, practice and
 simulated Driver Station packet updates while replay is active.
 
+`RobotSimulationRuntime.h` coordinates `SimulationLifecycle`, `DriveScene`,
+and optional `DriverInputTelemetry` at those same callbacks. The application
+supplies drive-scene configuration and continues to own game simulation,
+field geometry, localization policy, and reset decisions.
+
 `SimulationPower.h` adds optional charge integration, brownout counting and
 power/physics-clock telemetry on top of the battery supply helper. Construct
 one `SimulationPower` with pack capacity, discharge-curve voltages and internal
@@ -72,8 +77,10 @@ that command only during live simulation; replay returns no command.
 `SimulatedVisionSource` turns caller-supplied field-relative robot truth and
 fix status into latest-sample `InjectedVisionIO` observations. The caller owns
 visibility and alignment policy, camera transforms, uncertainty and reset timing.
-`Reset` clears pending observations and sensor status. The IO shares ownership of
-its sample buffer, so it remains valid if the source handle is destroyed.
+`SimulatedTagCamera` combines per-camera tag visibility and ideal observations;
+callers supply mounts, field layout, FOV, range, estimator uncertainty, and
+connection/tracking/alignment state. The IO shares ownership of its sample
+buffer, so it remains valid if the source handle is destroyed.
 
 `DriveResetCoordinator` tracks an autonomous pose-reset callback and feedback
 settling without driving the robot itself. The application supplies clearance
@@ -99,5 +106,5 @@ obstacle positions, and a clock; it retains ownership of telemetry and policy.
 
 `FootprintNavigation.h` provides opt-in NT obstacle injection and a command
 wrapper that publishes the Base footprint command's outcome. Applications choose
-the NT entries, target, obstacle source, drive, navigation configuration and
-outcome-to-name function.
+the topic paths or existing NT entries, target, obstacle source, drive, navigation
+configuration and outcome-to-name function.

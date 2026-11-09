@@ -1,11 +1,10 @@
 #pragma once
 
-#include "base/SimulationLatency.h"
-
 #ifndef __FRC_ROBORIO__
 #include "base/Replay.h"
 #include "base/SimulationRuntime.h"
 #include "meco/sim/PracticeMatchController.h"
+#include "meco/sim/SimulationDiagnostics.h"
 #include "meco/sim/SimulationNetwork.h"
 #include "meco/sim/SimulationPower.h"
 #include <frc/RobotBase.h>
@@ -39,8 +38,8 @@ class SimulationLifecycle {
         config_.practiceTeleopSeconds});
 #endif
   }
-  void BeforeScheduler() { base::simulation::BeginLatencyProbe(); }
-  void AfterScheduler() { base::simulation::EndLatencyProbe(); }
+  void BeforeScheduler() { meco::sim::BeginLatencyProbe(); }
+  void AfterScheduler() { meco::sim::EndLatencyProbe(); }
   void BeforeScene() {
 #ifndef __FRC_ROBORIO__
     if (!base::replay::Active() && practice_) practice_->Update();
