@@ -1,6 +1,5 @@
 #include "meco/sim/PracticeMatchController.h"
 #include <base/Replay.h>
-#include <base/Telemetry.h>
 #include <frc2/command/Commands.h>
 #include <frc/simulation/DriverStationSim.h>
 #ifndef __FRC_ROBORIO__
@@ -18,7 +17,6 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
-#include <utility>
 #include <algorithm>
 namespace meco::sim {
 using DS = frc::sim::DriverStationSim;
@@ -69,33 +67,18 @@ struct PracticeMatchController::Impl {
   }
   void Packet() { HALSIM_NotifyDriverStationNewData(); }
   void PublishReason(std::string reason) {
-    auto entry=table->GetEntry("Reason");
-    base::telemetry::Post("Practice/Reason", [entry, reason=std::move(reason)]() mutable { entry.SetString(reason); });
+    table->GetEntry("Reason").SetString(reason);
   }
   void PublishCommandResult(std::string command, bool accepted) {
-    auto lastCommand=table->GetEntry("LastCommand");
-    auto acceptedEntry=table->GetEntry("LastCommandAccepted");
-    base::telemetry::Post("Practice/CommandResult",
-      [lastCommand, acceptedEntry, command=std::move(command), accepted]() mutable {
-        lastCommand.SetString(command);
-        acceptedEntry.SetBoolean(accepted);
-      });
+    table->GetEntry("LastCommand").SetString(command);
+    table->GetEntry("LastCommandAccepted").SetBoolean(accepted);
   }
   void Publish() {
-    const auto stateValue=state;
-    const bool runningValue=running;
-    const double remainingValue=remaining;
-    const double matchTime=DS::GetMatchTime();
-    const auto gameData=frc::DriverStation::GetGameSpecificMessage();
-    auto tableHandle=table;
-    base::telemetry::Post("Practice/Status",
-      [table=std::move(tableHandle), stateValue, runningValue, remainingValue, matchTime, gameData] {
-        table->GetEntry("State").SetString(stateValue);
-        table->GetEntry("Running").SetBoolean(runningValue);
-        table->GetEntry("RemainingSeconds").SetDouble(remainingValue);
-        table->GetEntry("MatchTime").SetDouble(matchTime);
-        table->GetEntry("GameData").SetString(gameData);
-      });
+    table->GetEntry("State").SetString(state);
+    table->GetEntry("Running").SetBoolean(running);
+    table->GetEntry("RemainingSeconds").SetDouble(remaining);
+    table->GetEntry("MatchTime").SetDouble(DS::GetMatchTime());
+    table->GetEntry("GameData").SetString(frc::DriverStation::GetGameSpecificMessage());
   }
   void Finish(const std::string& next, const std::string& reason) {
     WriteScope scope(this);
