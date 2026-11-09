@@ -334,6 +334,43 @@ int RunDriveSmoke() {
   int result = 1;
   {
   base::DriveConfig config{};
+  // Keep the consumer fixture self-contained: MecoSimulation now requires a
+  // caller-supplied physical and motor profile rather than inferring one.
+  // These values are synthetic smoke-test geometry, not a robot preset.
+  config.massKg = 37.2;
+  config.moi = 2.4;
+  config.cof = 0.91;
+  config.wheelRadius = 0.061;
+  config.driveRatio = 5.8;
+  config.steerRatio = 18.4;
+  config.driveCurrent = 58;
+  config.steerCurrent = 29;
+  config.slipCurrent = 64;
+  config.modules = {{{11, 21, 31, 0, .25, .22}, {12, 22, 32, 0, .25, -.22},
+                     {13, 23, 33, 0, -.25, .22}, {14, 24, 34, 0, -.25, -.22}}};
+  auto& physics = config.simulation;
+  physics.bumperHalfLength = .31;
+  physics.bumperHalfWidth = .27;
+  physics.bumperHalfHeight = .08;
+  physics.bumperWallThickness = .032;
+  physics.bumperCornerRadius = .021;
+  physics.bumperFriction = .52;
+  physics.rideHeight = .24;
+  physics.rollInertia = 2.1;
+  physics.pitchInertia = 2.3;
+  physics.wheelInertia = .014;
+  physics.steerInertia = .002;
+  physics.longitudinalStiffness = 1100;
+  physics.lateralStiffness = 1300;
+  physics.suspensionRestLength = .24;
+  physics.suspensionTravel = .10;
+  physics.suspensionStiffness = 4200;
+  physics.suspensionDamping = 480;
+  physics.wheelWidth = .036;
+  physics.contactPatchLength = .017;
+  physics.contactShearDeflection = .0013;
+  physics.driveMotor = {.05, .018, 48, 58, .08};
+  physics.steerMotor = {.05, .018, 48, 29, .08};
   config.backend = base::DriveBackend::SparkMaxNavX;
   config.simulation.modules[0].driveOrientation =
       base::SimulationDeviceOrientation::CounterClockwisePositive;
