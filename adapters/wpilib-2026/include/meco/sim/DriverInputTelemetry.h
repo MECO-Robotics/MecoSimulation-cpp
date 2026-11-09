@@ -1,7 +1,8 @@
 #pragma once
 
+#include <base/Telemetry.h>
+#include <base/TelemetryPublishers.h>
 #include <frc/geometry/Rotation2d.h>
-#include <frc/smartdashboard/SmartDashboard.h>
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <ntcore_cpp.h>
@@ -10,6 +11,8 @@
 #include <cstdlib>
 #include <optional>
 #include <string_view>
+#include <utility>
+#include <memory>
 
 namespace meco::sim {
 // Simulation-only telemetry for a robot's chosen driver inputs. The robot
@@ -19,9 +22,11 @@ class DriverInputTelemetry {
   explicit DriverInputTelemetry(bool enabledByDefault)
       : override_(ReadOverride()), enabled_(override_.value_or(enabledByDefault)) {
     auto nt = nt::NetworkTableInstance::GetDefault();
-    consumed_ = nt.GetDoubleArrayTopic("/Simulation/NTGamepad/Consumed").Publish();
-    driverStation_ = nt.GetDoubleArrayTopic("/Simulation/NTGamepad/DriverStationCommand").Publish();
-    frc::SmartDashboard::PutBoolean("Simulation/NTGamepad/Enabled", enabled_);
+    consumed_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt.GetDoubleArrayTopic("/Simulation/NTGamepad/Consumed").Publish());
+    driverStation_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt.GetDoubleArrayTopic("/Simulation/NTGamepad/DriverStationCommand").Publish());
+    base::telemetry::PostDashboardBoolean("Simulation/NTGamepad/Enabled", enabled_);
   }
   bool Selected(bool selected) const { return ReadOverride().value_or(selected); }
   template <class GamepadState>
@@ -35,11 +40,18 @@ class DriverInputTelemetry {
         fieldX, fieldY, omega, state.accepted ? 1.0 : 0.0};
     const std::array<double, 7> driverStation{static_cast<double>(timestamp), leftY, leftX,
         rightX, fieldX, fieldY, omega};
-    consumed_.Set(consumed, timestamp);
-    driverStation_.Set(driverStation, timestamp);
-    frc::SmartDashboard::PutBoolean("Simulation/NTGamepad/Accepted", hasGamepad && state.accepted);
-    frc::SmartDashboard::PutNumber("Simulation/NTGamepad/AgeMs", std::isfinite(state.ageMs) ? state.ageMs : -1.0);
-    frc::SmartDashboard::PutNumber("Simulation/NTGamepad/Sequence", state.sequence);
+    base::telemetry::Post("Simulation/NTGamepad/Consumed",
+        [publisher = consumed_, consumed, timestamp] {
+          publisher->Set(consumed, timestamp);
+        });
+    base::telemetry::Post("Simulation/NTGamepad/DriverStationCommand",
+        [publisher = driverStation_, driverStation, timestamp] {
+          publisher->Set(driverStation, timestamp);
+        });
+    base::telemetry::PostDashboardBoolean("Simulation/NTGamepad/Accepted", hasGamepad && state.accepted);
+    base::telemetry::PostDashboardNumber("Simulation/NTGamepad/AgeMs",
+        std::isfinite(state.ageMs) ? state.ageMs : -1.0);
+    base::telemetry::PostDashboardNumber("Simulation/NTGamepad/Sequence", state.sequence);
   }
  private:
   static std::optional<bool> ReadOverride() {
@@ -48,6 +60,6 @@ class DriverInputTelemetry {
   }
   std::optional<bool> override_;
   bool enabled_;
-  nt::DoubleArrayPublisher consumed_, driverStation_;
+  std::shared_ptr<nt::DoubleArrayPublisher> consumed_, driverStation_;
 };
 }

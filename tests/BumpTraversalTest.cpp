@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <cmath>
@@ -35,7 +36,7 @@ int main() {
                          {0, std::sin(side * angle / 2), 0, std::cos(side * angle / 2)}};
             world.CreateBody(ramp);
         }
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         constexpr double pi = 3.141592653589793;
         auto contact = SyntheticRobotContactConfig();
         c.bumperHalfExtents.z = contact.noodleDiameter;
@@ -71,7 +72,7 @@ int main() {
                 // wheel/chassis state. No pre-seeded momentum in compliant cases.
                 const double target = 5.24;
                 const double voltage = compliant
-                                           ? std::clamp(target * c.driveRatio / (c.wheelRadius * c.motorKv) +
+                                           ? std::clamp(target * c.driveRatio / (c.wheelRadius * c.driveMotor.velocityConstantRadPerSecPerVolt) +
                                                             2 * (target - m.wheelVelocity * c.wheelRadius),
                                                         -12., 12.)
                                            : 12.;
@@ -123,7 +124,7 @@ int main() {
                   << " bumper_supported_unloaded_steps=" << supportedWithWheelsLifted << std::endl;
         if (scenario == 2 && (!cleared || maxTilt > pi / 4))
             throw std::runtime_error(
-                "Drive from rest must clear entire bump upright with 1/2-inch flush bumper clearance");
+                "Compliant contact profile must clear the synthetic two-plate bump upright");
         if (!compliant && (!rodeBump || maxHeight < .18 || maxHeight > .35 || supportedWithWheelsLifted < 3))
             throw std::runtime_error("Bumper must slide over the crest and support the lifted chassis "
                                      "without a leading-edge launch");

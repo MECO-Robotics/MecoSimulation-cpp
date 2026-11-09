@@ -1,5 +1,6 @@
 #include "base/sim/Arena.h"
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <chrono>
@@ -22,7 +23,7 @@ int ContactBenchmark()
         world.CreateBody(floor);
         BodySpec wall;
         wall.halfExtents = {.1, 2, 1};
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         wall.pose.position = {c.bumperHalfExtents.x + wall.halfExtents.x - .01, 0, 1};
         world.CreateBody(wall);
         auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, SyntheticRobotContactConfig())
@@ -71,7 +72,7 @@ int main(int argc, char **argv)
             SimulationClock clock(mode);
             std::chrono::steady_clock::time_point start;
             auto startMonitor = clock.Register({[&](double) { start = std::chrono::steady_clock::now(); }, {}, {}});
-            DrivePhysics drive(*clock.World());
+            DrivePhysics drive(*clock.World(), SyntheticDrivePhysicsConfig());
             auto driveRegistration = clock.Register(
                 {[&](double dt) { drive.BeforePhysics(dt); }, [&](double dt) { drive.AfterPhysics(dt); }, {}});
             Arena arena(clock, [&] { return drive.Truth().body; }, std::string(scene) != "empty");

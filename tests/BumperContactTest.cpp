@@ -1,5 +1,6 @@
 #include "base/sim/SimulationWorld.h"
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include <cmath>
 #include <iostream>
 #include <source_location>
@@ -12,11 +13,12 @@ void Check(bool ok, std::source_location at=std::source_location::current()) {
 }
 BodySpec Bumper() {
     BodySpec b;
-    const DrivePhysicsConfig c;
+    const auto c = SyntheticDrivePhysicsConfig();
     b.shape=BodySpec::Shape::BumperRing;
     b.halfExtents=c.bumperHalfExtents;
     b.radius=c.bumperWallThickness;
-    b.friction=.65;
+    b.cornerRadius=c.bumperCornerRadius;
+    b.friction=c.bumperFriction;
     b.mass=c.mass;
     b.inertia=c.inertia;
     b.centerOfMass=c.centerOfMass;
@@ -49,7 +51,7 @@ int main() {
         for(int i=0;i<3000;++i) {
             w.Step(.001); touched=touched || w.ContactManifoldCount()>0;
             auto s=w.ReadBody(body); const auto q=s.pose.rotation;
-            const double r=kBumperCornerRadius;
+            const double r=b.cornerRadius;
             const double lowest=s.pose.position.z-(b.halfExtents.x-r)*std::abs(2*(q.x*q.z-q.w*q.y))
                 -(b.halfExtents.y-r)*std::abs(2*(q.y*q.z+q.w*q.x))-(b.halfExtents.z-r)*std::abs(1-2*(q.x*q.x+q.y*q.y))-r;
             Check(lowest>-.005);

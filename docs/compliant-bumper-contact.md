@@ -24,10 +24,10 @@ Trying to understand why the robot catches on a bump? Start with the foam, backi
 All configured heights reference unloaded carpet. `RobotContactConfig` carries
 the pan, foam, backing, stress curve, damping, and friction values; the caller
 must provide a complete robot profile. `DrivePhysicsConfig` carries the bumper
-envelope, wall thickness, wheel geometry, friction, motor parameters, and module
-locations. MecoSimulation supplies illustrative chassis and actuator defaults,
-not a calibrated robot model. Construction values are estimates unless measured
-for the particular robot.
+envelope, wall and corner radii, bumper friction, wheel geometry and friction,
+separate drive/steer motor models, and module locations. It has no implied
+chassis or actuator profile. Construction values are caller supplied and are
+estimates unless measured for the particular robot.
 
 The pan and four plywood segments form one rigid compound on the existing robot
 body. No mass is added. Compound geometric CoM is cancelled before applying the
@@ -120,8 +120,8 @@ material curve, wheel dimensions, and tire friction once during initialization.
 flat-ground support; progressive/damped/separated foam response and impact energy;
 rigid backing/pan blocking with static-only seam queries; finite-wheel lip support;
 airborne wheel/chassis momentum conservation; and compliant shear/reset/separation.
-The bump traversal test uses synthetic two-plate geometry and illustrative
-drivetrain settings to exercise rigid and compliant contact, upright crossing,
+The bump traversal test uses synthetic two-plate geometry and an explicit
+synthetic drivetrain profile to exercise rigid and compliant contact, upright crossing,
 wheel unloading, foam response, and pan/backing contacts. It is a generic model
 check, not acceptance of any season field or robot configuration.
 

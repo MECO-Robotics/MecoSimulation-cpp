@@ -8,10 +8,6 @@
 
 namespace base::sim
 {
-// Estimated padded bumper edge radius, bounded by each segment's dimensions.
-// This rounds the rigid contact envelope; it is not a foam compliance model.
-inline constexpr double kBumperCornerRadius = .0381; // 1.5 inches
-
 struct Vec3
 {
     double x{}, y{}, z{};
@@ -55,6 +51,7 @@ struct BodySpec
     Shape shape{Shape::Box};
     Vec3 halfExtents{0.5, 0.5, 0.5};
     double radius{0.1}; // Sphere radius, or BumperRing wall thickness; metres.
+    double cornerRadius{}; // BumperRing convex edge radius; metres.
     double mass{};  // zero creates a static collider
     Vec3 inertia{}; // zero selects shape-derived inertia
     Vec3 centerOfMass{};

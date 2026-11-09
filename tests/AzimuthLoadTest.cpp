@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -11,7 +12,7 @@ void Check(bool ok,std::source_location at=std::source_location::current()) {
     if(!ok) throw std::runtime_error("Azimuth load contract at line "+std::to_string(at.line()));
 }
 DrivePhysicsConfig Config() {
-    return DrivePhysicsConfig{};
+    return SyntheticDrivePhysicsConfig();
 }
 void Step(SimulationWorld& w,DrivePhysics& d,double dt=.001) { d.BeforePhysics(dt);w.Step(dt);d.AfterPhysics(dt); }
 // A restrained chassis is a steering dynamometer. Moving the belt underneath
@@ -22,7 +23,7 @@ ModulePhysicsState Dynamometer(double mass,double rolling) {
     const auto initial=w.ReadBody(d.Body());
     for(int i=0;i<1300;++i) {
         auto held=initial;held.linearVelocity.x=rolling;w.SetBodyState(d.Body(),held);
-        d.SetModuleVoltages(0,rolling==0?0:c.driveRatio*rolling/c.wheelRadius/c.motorKv+c.frictionVoltage,
+        d.SetModuleVoltages(0,rolling==0?0:c.driveRatio*rolling/c.wheelRadius/c.driveMotor.velocityConstantRadPerSecPerVolt+c.driveMotor.frictionVoltage,
                             i<300?0:.3);
         Step(w,d);
     }
@@ -73,7 +74,7 @@ int main() {
                 const auto&m=after.modules[j];
                 Check(std::sqrt(m.longitudinalForce*m.longitudinalForce+m.lateralForce*m.lateralForce+
                       m.azimuthGroundTorque*m.azimuthGroundTorque/(r*r))<=c.friction*m.normalForce+1e-7);
-                Check(std::abs(m.steerCurrent)<=c.steerCurrentLimit+1e-8 && std::abs(m.driveCurrent)<=c.driveCurrentLimit+1e-8);
+                Check(std::abs(m.steerCurrent)<=c.steerMotor.currentLimitAmps+1e-8 && std::abs(m.driveCurrent)<=c.driveMotor.currentLimitAmps+1e-8);
                 Check(std::abs(c.steerInertia*(m.steerVelocity-before.modules[j].steerVelocity)/.001-
                                m.steerMotorTorque-m.azimuthGroundTorque)<1e-6);
             }

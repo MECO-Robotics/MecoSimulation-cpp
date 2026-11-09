@@ -240,7 +240,8 @@ BodyHandle SimulationWorld::CreateBody(const BodySpec &s)
     CheckPose(s.pose);
     if (!std::isfinite(s.mass) || s.mass < 0 || !Finite(s.halfExtents) || s.halfExtents.x <= 0 ||
         s.halfExtents.y <= 0 || s.halfExtents.z <= 0 || !std::isfinite(s.radius) || s.radius <= 0 ||
-        !Finite(s.inertia) || !Finite(s.centerOfMass) || s.inertia.x < 0 || s.inertia.y < 0 || s.inertia.z < 0 ||
+        !Finite(s.inertia) || !Finite(s.centerOfMass) || !std::isfinite(s.cornerRadius) || s.cornerRadius < 0 ||
+        s.inertia.x < 0 || s.inertia.y < 0 || s.inertia.z < 0 ||
         !std::isfinite(s.friction) || s.friction < 0 || !std::isfinite(s.restitution) || s.restitution < 0 ||
         s.restitution > 1)
         throw std::invalid_argument("Invalid simulation body configuration");
@@ -284,8 +285,8 @@ BodyHandle SimulationWorld::CreateBody(const BodySpec &s)
         if (t >= std::min(s.halfExtents.x, s.halfExtents.y))
             throw std::invalid_argument("Bumper wall thickness closes the centre opening");
         JPH::StaticCompoundShapeSettings ring;
-        auto box = [](Vec3 half) {
-            return new JPH::BoxShape(V(half), float(std::min({kBumperCornerRadius, half.x*.95, half.y*.95, half.z*.95})));
+        auto box = [cornerRadius = s.cornerRadius](Vec3 half) {
+            return new JPH::BoxShape(V(half), float(std::min({cornerRadius, half.x*.95, half.y*.95, half.z*.95})));
         };
         // Front/rear span the full width. Side segments meet them without
         // overlap, so the shell has no invisible underbody or doubled corners.

@@ -26,7 +26,7 @@ Its source and compiled implementation are included in the Simulation vendordep.
 
 The constructor accepts `PracticeMatchProfile{autonomousSeconds,
 assessmentSeconds, teleopSeconds}` and an optional NT instance. Applications own
-the season profile; 2026 uses `{20,3,140}`. FPGA microseconds determine boundaries.
+the timing profile. FPGA microseconds determine boundaries.
 Do not use another automated DS controller concurrently.
 
 ## NT contract

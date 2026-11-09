@@ -5,8 +5,9 @@
 #include "meco/sim/DriveSimulationAdapter.h"
 #include "meco/sim/SimulationPose.h"
 #include <base/Replay.h>
+#include <base/Telemetry.h>
+#include <base/TelemetryPublishers.h>
 #include <frc/RobotBase.h>
-#include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/geometry/Quaternion.h>
 #include <frc/geometry/struct/Pose3dStruct.h>
 #include <networktables/NetworkTableInstance.h>
@@ -15,6 +16,7 @@
 #include <functional>
 #include <string_view>
 #include <optional>
+#include <memory>
 #include <vector>
 
 namespace meco::sim {
@@ -38,17 +40,19 @@ class DriveScene {
   DriveScene(base::Drive& drive, Configuration config)
       : drive_(drive), config_(std::move(config)), reset_(config_.feedbackLoops),
         groundedHeight_(units::meter_t{drive.Config().simulation.rideHeight}),
-        pose_(nt::NetworkTableInstance::GetDefault().GetStructTopic<frc::Pose3d>("/Simulation/RobotTruth").Publish()),
-        bodyPose_(nt::NetworkTableInstance::GetDefault().GetStructTopic<frc::Pose3d>("/Simulation/PhysicsBodyTruth").Publish()) {
+        pose_(std::make_shared<nt::StructPublisher<frc::Pose3d>>(
+            nt::NetworkTableInstance::GetDefault().GetStructTopic<frc::Pose3d>("/Simulation/RobotTruth").Publish())),
+        bodyPose_(std::make_shared<nt::StructPublisher<frc::Pose3d>>(
+            nt::NetworkTableInstance::GetDefault().GetStructTopic<frc::Pose3d>("/Simulation/PhysicsBodyTruth").Publish())) {
     if (const char* fieldMode = std::getenv("FRC_SIM_FIELD_COLLIDERS"))
       config_.fieldCollidersEnabled = std::string_view{fieldMode} != "0";
     const auto backend = base::sim::BackendFromEnvironment();
     const auto& physics = drive.Config().simulation;
-    frc::SmartDashboard::PutNumber("FieldSimulation/GroundedBodyHeight", physics.rideHeight);
-    frc::SmartDashboard::PutNumber("FieldSimulation/BumperCornerRadius", backend == base::sim::Backend::Full3D && config_.contact
-        ? config_.contact->noodleDiameter / 2 : base::sim::kBumperCornerRadius);
-    frc::SmartDashboard::PutNumber("FieldSimulation/BumperBottomHeight", physics.rideHeight - physics.bumperHalfHeight);
-    frc::SmartDashboard::PutNumber("FieldSimulation/BumperTopHeight", physics.rideHeight + physics.bumperHalfHeight);
+    base::telemetry::PostDashboardNumber("FieldSimulation/GroundedBodyHeight", physics.rideHeight);
+    base::telemetry::PostDashboardNumber("FieldSimulation/BumperCornerRadius", backend == base::sim::Backend::Full3D && config_.contact
+        ? config_.contact->noodleDiameter / 2 : physics.bumperCornerRadius);
+    base::telemetry::PostDashboardNumber("FieldSimulation/BumperBottomHeight", physics.rideHeight - physics.bumperHalfHeight);
+    base::telemetry::PostDashboardNumber("FieldSimulation/BumperTopHeight", physics.rideHeight + physics.bumperHalfHeight);
     auto session = backend == base::sim::Backend::Full3D && config_.contact
         ? CreateDriveSimulationAdapter(drive.Config(), backend, *config_.contact)
         : CreateDriveSimulationAdapter(drive.Config(), backend);
@@ -56,8 +60,8 @@ class DriveScene {
       auto& arena = session->CreateArena(base::sim::ArenaScene::Empty);
       for (const auto& collider : config_.colliders) arena.AddCollider(collider);
     }
-    frc::SmartDashboard::PutBoolean("FieldSimulation/CollidersEnabled", config_.fieldCollidersEnabled);
-    frc::SmartDashboard::PutNumber("FieldSimulation/ColliderCount", config_.fieldCollidersEnabled ? config_.colliders.size() : 0);
+    base::telemetry::PostDashboardBoolean("FieldSimulation/CollidersEnabled", config_.fieldCollidersEnabled);
+    base::telemetry::PostDashboardNumber("FieldSimulation/ColliderCount", config_.fieldCollidersEnabled ? config_.colliders.size() : 0);
     session_ = session.get(); // Drive owns the adapter; callbacks require this scene to remain alive while drive is used.
     drive.SetSimulationAdapter(std::move(session));
     drive.SetPoseResetCallback([this](const frc::Pose2d& pose) {
@@ -67,16 +71,16 @@ class DriveScene {
       if (action == DriveResetCoordinator::PoseReset::autonomousAccepted) {
         if (config_.resetSensors) config_.resetSensors();
         drive_.ResetSimulation(pose);
-        frc::SmartDashboard::PutString("Simulation/AutoStartPose", "applied");
+        base::telemetry::PostDashboardString("Simulation/AutoStartPose", "applied");
       } else if (action == DriveResetCoordinator::PoseReset::autonomousRejected) {
         drive_.ResetPose(reset_.PhysicalOrigin());
-        frc::SmartDashboard::PutString("Simulation/AutoStartPose", "blocked-by-field");
+        base::telemetry::PostDashboardString("Simulation/AutoStartPose", "blocked-by-field");
       }
     });
   }
   void BeginAutonomousSchedule() {
     reset_.BeginAutonomousSchedule();
-    frc::SmartDashboard::PutString("Simulation/AutoStartPose", "not-requested");
+    base::telemetry::PostDashboardString("Simulation/AutoStartPose", "not-requested");
   }
   bool EndAutonomousSchedule() { return reset_.EndAutonomousSchedule(); }
   bool Ready() const { return reset_.Ready(); }
@@ -96,9 +100,11 @@ class DriveScene {
     const auto& q = body.pose.rotation;
     const frc::Pose3d bodyPose{units::meter_t{p.x}, units::meter_t{p.y}, units::meter_t{p.z},
                                frc::Rotation3d{frc::Quaternion{q.w, q.x, q.y, q.z}}};
-    bodyPose_.Set(bodyPose);
+    base::telemetry::Post("Simulation/PhysicsBodyTruth",
+        [publisher = bodyPose_, bodyPose] { publisher->Set(bodyPose); });
     const auto visualPose = FloorReferencedRobotPose(bodyPose, groundedHeight_);
-    pose_.Set(visualPose);
+    base::telemetry::Post("Simulation/RobotTruth",
+        [publisher = pose_, visualPose] { publisher->Set(visualPose); });
     return Snapshot{visualPose, body};
   }
  private:
@@ -106,7 +112,7 @@ class DriveScene {
   Configuration config_;
   DriveResetCoordinator reset_;
   units::meter_t groundedHeight_;
-  nt::StructPublisher<frc::Pose3d> pose_, bodyPose_;
+  std::shared_ptr<nt::StructPublisher<frc::Pose3d>> pose_, bodyPose_;
   DriveSimulationSession* session_{};
 };
 

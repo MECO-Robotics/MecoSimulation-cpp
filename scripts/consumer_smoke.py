@@ -23,7 +23,7 @@ def main() -> None:
     parser.add_argument("--warm-dependencies", action="store_true", help="Resolve dependencies only; does not compile or validate the consumer")
     parser.add_argument("--offline", action="store_true", help="Require dependencies to be present in the warmed Gradle cache")
     parser.add_argument("--meco-base-root", type=Path, required=True)
-    parser.add_argument("--expected-base-version", default="2026.2.17-beta.4")
+    parser.add_argument("--expected-base-version", default="2026.2.17-beta.5")
     args = parser.parse_args()
     if args.warm_dependencies and args.offline:
         parser.error("--offline cannot be used while warming dependencies")

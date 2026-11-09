@@ -1,10 +1,9 @@
 #include "meco/sim/DriveSimulationAdapter.h"
 
 #include "base/SimulationRuntime.h"
+#include <base/Telemetry.h>
+#include <base/TelemetryPublishers.h>
 #include "meco/sim/SimulationDiagnostics.h"
-
-#include <frc/system/plant/DCMotor.h>
-#include <frc/smartdashboard/SmartDashboard.h>
 
 #include <algorithm>
 #include <cmath>
@@ -25,6 +24,8 @@ base::sim::DrivePhysicsConfig MakePhysicsConfig(const base::DriveConfig &config)
     out.centerOfMass = {s.centerOfMassX, s.centerOfMassY, s.centerOfMassZ};
     out.bumperHalfExtents = {s.bumperHalfLength, s.bumperHalfWidth, s.bumperHalfHeight};
     out.bumperWallThickness = s.bumperWallThickness;
+    out.bumperCornerRadius = s.bumperCornerRadius;
+    out.bumperFriction = s.bumperFriction;
     out.rideHeight = s.rideHeight;
     out.wheelRadius = config.wheelRadius;
     out.driveRatio = config.driveRatio;
@@ -39,18 +40,15 @@ base::sim::DrivePhysicsConfig MakePhysicsConfig(const base::DriveConfig &config)
     out.suspensionTravel = s.suspensionTravel;
     out.suspensionStiffness = s.suspensionStiffness;
     out.suspensionDamping = s.suspensionDamping;
-    // Phoenix's driveCurrent is a battery-side supply limit. Wheel torque is
-    // limited by SlipCurrent (stator current), not by that supply setting.
-    out.driveCurrentLimit = config.backend == base::DriveBackend::SparkMaxNavX
-                                ? config.driveCurrent : config.slipCurrent;
-    out.steerCurrentLimit = config.steerCurrent;
-    // Native Phoenix swerve module requests enable FOC. Match that plant;
-    // SparkMax uses the NEO model and its motor-side SmartCurrentLimit.
-    const auto motor = config.backend == base::DriveBackend::SparkMaxNavX
-                           ? frc::DCMotor::NEO(1) : frc::DCMotor::KrakenX60FOC(1);
-    out.motorResistance = motor.R.value();
-    out.motorKt = motor.Kt.value();
-    out.motorKv = motor.Kv.value();
+    out.wheelWidth = s.wheelWidth;
+    out.contactPatchLength = s.contactPatchLength;
+    out.contactShearDeflection = s.contactShearDeflection;
+    out.driveMotor = {s.driveMotor.resistanceOhms, s.driveMotor.torqueConstantNmPerAmp,
+                      s.driveMotor.velocityConstantRadPerSecPerVolt, s.driveMotor.currentLimitAmps,
+                      s.driveMotor.frictionVoltage};
+    out.steerMotor = {s.steerMotor.resistanceOhms, s.steerMotor.torqueConstantNmPerAmp,
+                      s.steerMotor.velocityConstantRadPerSecPerVolt, s.steerMotor.currentLimitAmps,
+                      s.steerMotor.frictionVoltage};
     for (std::size_t i = 0; i < out.moduleLocations.size(); ++i)
         out.moduleLocations[i] = {config.modules[i].xMeters, config.modules[i].yMeters, 0};
     return out;
@@ -73,23 +71,25 @@ struct DriveSimulationSession::Impl
         if (contact)
         {
             const auto &c = *contact;
-            frc::SmartDashboard::PutNumber("FieldSimulation/ChassisClearance", c.chassisClearance);
-            frc::SmartDashboard::PutNumber("FieldSimulation/PanThickness", c.panThickness);
-            frc::SmartDashboard::PutNumber("FieldSimulation/PanHalfLength", c.panHalfLength);
-            frc::SmartDashboard::PutNumber("FieldSimulation/PanHalfWidth", c.panHalfWidth);
-            frc::SmartDashboard::PutNumber("FieldSimulation/BackingFloorGap", c.backingFloorGap);
-            frc::SmartDashboard::PutNumber("FieldSimulation/BackingThickness", c.backingThickness);
-            frc::SmartDashboard::PutNumber("FieldSimulation/BackingHeight", c.backingHeight);
-            frc::SmartDashboard::PutNumber("FieldSimulation/BumperFloorGap", c.bumperFloorGap);
-            frc::SmartDashboard::PutNumber("FieldSimulation/NoodleDiameter", c.noodleDiameter);
-            frc::SmartDashboard::PutNumber("FieldSimulation/FoamDampingRatio", c.dampingRatio);
-            frc::SmartDashboard::PutBoolean("FieldSimulation/CompliantBumpers", true);
-            frc::SmartDashboard::PutNumberArray("FieldSimulation/FoamCompressionStrain",c.compressionStrain);
-            frc::SmartDashboard::PutNumberArray("FieldSimulation/FoamCompressionStressPa",c.compressionStressPa);
-            frc::SmartDashboard::PutNumber("FieldSimulation/BumperMaterialFriction",c.friction);
-            frc::SmartDashboard::PutNumber("FieldSimulation/WheelRadius",config.wheelRadius);
-            frc::SmartDashboard::PutNumber("FieldSimulation/WheelWidth",physics_->Config().wheelWidth);
-            frc::SmartDashboard::PutNumber("FieldSimulation/TireFrictionEstimate",config.cof);
+            base::telemetry::PostDashboardNumber("FieldSimulation/ChassisClearance", c.chassisClearance);
+            base::telemetry::PostDashboardNumber("FieldSimulation/PanThickness", c.panThickness);
+            base::telemetry::PostDashboardNumber("FieldSimulation/PanHalfLength", c.panHalfLength);
+            base::telemetry::PostDashboardNumber("FieldSimulation/PanHalfWidth", c.panHalfWidth);
+            base::telemetry::PostDashboardNumber("FieldSimulation/BackingFloorGap", c.backingFloorGap);
+            base::telemetry::PostDashboardNumber("FieldSimulation/BackingThickness", c.backingThickness);
+            base::telemetry::PostDashboardNumber("FieldSimulation/BackingHeight", c.backingHeight);
+            base::telemetry::PostDashboardNumber("FieldSimulation/BumperFloorGap", c.bumperFloorGap);
+            base::telemetry::PostDashboardNumber("FieldSimulation/NoodleDiameter", c.noodleDiameter);
+            base::telemetry::PostDashboardNumber("FieldSimulation/FoamDampingRatio", c.dampingRatio);
+            base::telemetry::PostDashboardBoolean("FieldSimulation/CompliantBumpers", true);
+            base::telemetry::PostDashboardNumberArray("FieldSimulation/FoamCompressionStrain",
+                {c.compressionStrain.begin(), c.compressionStrain.end()});
+            base::telemetry::PostDashboardNumberArray("FieldSimulation/FoamCompressionStressPa",
+                {c.compressionStressPa.begin(), c.compressionStressPa.end()});
+            base::telemetry::PostDashboardNumber("FieldSimulation/BumperMaterialFriction", c.friction);
+            base::telemetry::PostDashboardNumber("FieldSimulation/WheelRadius", config.wheelRadius);
+            base::telemetry::PostDashboardNumber("FieldSimulation/WheelWidth", physics_->Config().wheelWidth);
+            base::telemetry::PostDashboardNumber("FieldSimulation/TireFrictionEstimate", config.cof);
         }
         // The standalone drive world still needs a ground surface. Without it,
         // Full3D gravity pulls the chassis through empty space and the wheel
@@ -208,18 +208,23 @@ struct DriveSimulationSession::Impl
                                                     m.steerMotorTorque,m.driveCurrent,m.steerCurrent};
                     std::copy(module.begin(),module.end(),values.begin()+1+6*i);
                 }
-                static auto publisher=nt::NetworkTableInstance::GetDefault()
-                    .GetDoubleArrayTopic("/Diagnostics/Drive/AzimuthLoad").Publish();
-                publisher.Set(values);
+                base::telemetry::Post("Diagnostics/Drive/AzimuthLoad",
+                    [publisher = azimuthLoad_, values] { publisher->Set(values); });
                 std::array<double, 4> loads{};
                 for (size_t i = 0; i < 4; ++i)
                     loads[i] = truth.modules[i].normalForce;
-                wheelLoads_.Set(loads);
-                foamCompression_.Set(truth.foamCompression);
-                foamForces_.Set(truth.foamNormalForce);
+                base::telemetry::Post("Simulation/Contact/WheelNormalLoadsN",
+                    [publisher = wheelLoads_, loads] { publisher->Set(loads); });
+                const auto compression = truth.foamCompression;
+                base::telemetry::Post("Simulation/Contact/FoamCompressionM",
+                    [publisher = foamCompression_, compression] { publisher->Set(compression); });
+                const auto foamForces = truth.foamNormalForce;
+                base::telemetry::Post("Simulation/Contact/FoamNormalForcesN",
+                    [publisher = foamForces_, foamForces] { publisher->Set(foamForces); });
                 const std::array<double, 2> rigid{double(truth.rigidContacts.pan),
                                                   double(truth.rigidContacts.backing)};
-                rigidContacts_.Set(rigid);
+                base::telemetry::Post("Simulation/Contact/RigidContactsPanBacking",
+                    [publisher = rigidContacts_, rigid] { publisher->Set(rigid); });
             }
         }
         const auto &q = truth.body.pose.rotation;
@@ -242,20 +247,16 @@ struct DriveSimulationSession::Impl
     base::DriveConfig config_;
     base::sim::BodyHandle floor_{};
     base::Drive *drive_{};
-    nt::DoubleArrayPublisher wheelLoads_ = nt::NetworkTableInstance::GetDefault()
-                                               .GetDoubleArrayTopic("/Simulation/Contact/WheelNormalLoadsN")
-                                               .Publish();
-    nt::DoubleArrayPublisher foamCompression_ =
-        nt::NetworkTableInstance::GetDefault()
-            .GetDoubleArrayTopic("/Simulation/Contact/FoamCompressionM")
-            .Publish();
-    nt::DoubleArrayPublisher foamForces_ = nt::NetworkTableInstance::GetDefault()
-                                               .GetDoubleArrayTopic("/Simulation/Contact/FoamNormalForcesN")
-                                               .Publish();
-    nt::DoubleArrayPublisher rigidContacts_ =
-        nt::NetworkTableInstance::GetDefault()
-            .GetDoubleArrayTopic("/Simulation/Contact/RigidContactsPanBacking")
-            .Publish();
+    std::shared_ptr<nt::DoubleArrayPublisher> azimuthLoad_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Diagnostics/Drive/AzimuthLoad").Publish());
+    std::shared_ptr<nt::DoubleArrayPublisher> wheelLoads_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Simulation/Contact/WheelNormalLoadsN").Publish());
+    std::shared_ptr<nt::DoubleArrayPublisher> foamCompression_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Simulation/Contact/FoamCompressionM").Publish());
+    std::shared_ptr<nt::DoubleArrayPublisher> foamForces_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Simulation/Contact/FoamNormalForcesN").Publish());
+    std::shared_ptr<nt::DoubleArrayPublisher> rigidContacts_ = std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Simulation/Contact/RigidContactsPanBacking").Publish());
     int64_t lastContactPublish_{};
     double lastYaw_{}, unwrappedYaw_{};
     std::unique_ptr<base::sim::Arena> arena_;

@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <cmath>
@@ -14,7 +15,7 @@ void Check(bool condition, const char *message)
 }
 DrivePhysicsConfig Config()
 {
-    return DrivePhysicsConfig{};
+    return SyntheticDrivePhysicsConfig();
 }
 void Floor(SimulationWorld &w)
 {
