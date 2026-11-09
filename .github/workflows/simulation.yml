@@ -134,7 +134,7 @@ jobs:
       - name: Build and test Release core
         if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
         run: |
-          cmake --build build/Release --config Release --parallel 2
+          cmake --build build/Release --config Release --parallel 4
           ctest --test-dir build/Release -C Release --output-on-failure
 
   build-debug-core:
@@ -173,4 +173,4 @@ jobs:
         run: cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF
       - name: Build Debug core
         if: steps.binary_reuse.outputs.enabled != 'true' && steps.core_mode.outputs.mode == 'full-source-build'
-        run: cmake --build build/Debug --config Debug --parallel 2
+        run: cmake --build build/Debug --config Debug --parallel 4
