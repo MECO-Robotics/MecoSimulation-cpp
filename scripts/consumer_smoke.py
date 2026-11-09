@@ -208,7 +208,7 @@ int main() {
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
   base::sim::BodySpec particleWall;
-  particleWall.halfExtents = {.5, .5, .5};
+  particleWall.halfExtents = {.01, .5, .5};
   const meco::sim::ParticleFieldContacts field{{particleWall}};
   ground.push_back({{.03, 0, .5}, {-1, 0, 0}});
   field.Resolve(ground, .07, .25);
