@@ -210,7 +210,7 @@ int main() {
   base::sim::BodySpec particleWall;
   particleWall.halfExtents = {.5, .5, .5};
   const meco::sim::ParticleFieldContacts field{{particleWall}};
-  ground.push_back({{.03, 2, .5}, {-1, 0, 0}});
+  ground.push_back({{.03, 0, .5}, {-1, 0, 0}});
   field.Resolve(ground, .07, .25);
   if (ground.front().position.x < .069 || ground.front().velocity.x <= 0) return 44;
   meco::sim::PieceSensorConfig sensorConfig;
