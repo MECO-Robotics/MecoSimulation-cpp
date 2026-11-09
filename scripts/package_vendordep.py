@@ -17,7 +17,7 @@ from simulation_headers import collect_simulation_headers, validate_simulation_h
 from reuse_simulation_core import verify_retained_core_provenance
 from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
-VERSION = "2026.0.23-beta.2"
+VERSION = "2026.0.23-beta.3"
 BASE_VERSION = "2026.2.17-beta.5"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {

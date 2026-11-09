@@ -85,7 +85,7 @@ Pages publication workflow for production releases.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.5 and MECO
-Simulation 2026.0.23-beta.2. It includes explicit robot contact profiles and
+Simulation 2026.0.23-beta.3. It includes explicit robot contact profiles and
 generic bumper dimensions; use these matching packages together rather than
 mixing the new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
