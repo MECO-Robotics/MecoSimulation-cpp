@@ -1,5 +1,7 @@
 #include "base/sim/Arena.h"
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
+#include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -21,14 +23,10 @@ int ContactBenchmark()
         world.CreateBody(floor);
         BodySpec wall;
         wall.halfExtents = {.1, 2, 1};
-        wall.pose.position = {.52, 0, 1};
+        auto c = SyntheticDrivePhysicsConfig();
+        wall.pose.position = {c.bumperHalfExtents.x + wall.halfExtents.x - .01, 0, 1};
         world.CreateBody(wall);
-        DrivePhysicsConfig c;
-        c.mass = 67.6;
-        c.rideHeight = .0762;
-        c.bumperHalfExtents.z = .06985;
-        c.centerOfMass.z = .2238;
-        auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, RobotContactConfig{})
+        auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, SyntheticRobotContactConfig())
                                : std::make_unique<DrivePhysics>(world, c);
         std::vector<double> samples;
         samples.reserve(5000);
@@ -74,7 +72,7 @@ int main(int argc, char **argv)
             SimulationClock clock(mode);
             std::chrono::steady_clock::time_point start;
             auto startMonitor = clock.Register({[&](double) { start = std::chrono::steady_clock::now(); }, {}, {}});
-            DrivePhysics drive(*clock.World());
+            DrivePhysics drive(*clock.World(), SyntheticDrivePhysicsConfig());
             auto driveRegistration = clock.Register(
                 {[&](double dt) { drive.BeforePhysics(dt); }, [&](double dt) { drive.AfterPhysics(dt); }, {}});
             Arena arena(clock, [&] { return drive.Truth().body; }, std::string(scene) != "empty");

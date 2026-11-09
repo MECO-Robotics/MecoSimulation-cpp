@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include <cmath>
 #include <iostream>
 #include <source_location>
@@ -44,7 +45,7 @@ int main()
     // Force and torque act at module locations with configured mass and inertia.
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         c.friction = .15;
         DrivePhysics d(w, c);
         for (size_t i = 0; i < 4; ++i)
@@ -82,32 +83,33 @@ int main()
     // into current limiting. Check torque balance at the final loaded speed.
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         DrivePhysics d(w, c);
         d.SetModuleVoltages(0, 2.85, 0);
         d.BeforePhysics(.004);
         const auto m = d.Truth().modules[0];
         const double inferredCurrent = (c.wheelInertia * m.wheelVelocity / .004 + c.wheelRadius * m.longitudinalForce) /
-                                       (c.driveRatio * c.motorKt);
-        Check(inferredCurrent <= c.driveCurrentLimit + 1e-8);
-        Check(std::abs(inferredCurrent - c.driveCurrentLimit) < 1e-6);
+                                       (c.driveRatio * c.driveMotor.torqueConstantNmPerAmp);
+        Check(inferredCurrent <= c.driveMotor.currentLimitAmps + 1e-8);
+        Check(std::abs(inferredCurrent - c.driveMotor.currentLimitAmps) < 1e-6);
         Check(std::abs(m.driveCurrent - inferredCurrent) < 1e-6);
     }
     // Powered wall contact stops truth while spinning wheels slip; zero voltage dissipates energy.
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         c.friction = .4;
         DrivePhysics d(w, c);
         BodySpec wall;
         wall.halfExtents = {.1, 3, 1};
-        wall.pose.position = {2, 0, 1};
+        const double expectedStopX = 1.4;
+        wall.pose.position = {expectedStopX + c.bumperHalfExtents.x + wall.halfExtents.x, 0, 1};
         w.CreateBody(wall);
         for (size_t i = 0; i < 4; ++i)
             d.SetModuleVoltages(i, 12, 0);
         Step(w, d, 1000);
         auto t = d.Truth();
-        Check(t.body.pose.position.x < 1.5 && t.body.pose.position.x > 1.3);
+        Check(t.body.pose.position.x < expectedStopX + .05 && t.body.pose.position.x > expectedStopX - .05);
         Check(std::abs(t.body.linearVelocity.x) < .1 && t.modules[0].longitudinalSlip > 1);
         for (size_t i = 0; i < 4; ++i)
             d.SetModuleVoltages(i, 0, 0);
@@ -122,7 +124,7 @@ int main()
     // Coupling changes rotor coordinates and produces steering reaction.
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         c.couplingRatio = 3;
         DrivePhysics d(w, c);
         d.SetModuleVoltages(0, 6, 0);
@@ -141,7 +143,7 @@ int main()
     {
         SimulationWorld w(Backend::Full3D);
         Floor(w);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         c.mass = mass;
         DrivePhysics d(w, c);
         Step(w, d, 1000);
@@ -156,7 +158,7 @@ int main()
     {
         SimulationWorld w(Backend::Full3D);
         Floor(w);
-        DrivePhysicsConfig c;
+        auto c = SyntheticDrivePhysicsConfig();
         c.centerOfMass.z = .5;
         DrivePhysics d(w, c);
         // Elevated COM starts outside the support footprint at this roll.
@@ -173,7 +175,7 @@ int main()
         ramp.pose.position = {0, 0, .5};
         ramp.pose.rotation = {0, std::sin(-.08), 0, std::cos(.08)};
         w.CreateBody(ramp);
-        DrivePhysics d(w);
+        DrivePhysics d(w, SyntheticDrivePhysicsConfig());
         d.Reset({{0, 0, 1}, {}});
         Step(w, d, 700);
         auto before = d.Truth();
@@ -186,10 +188,11 @@ int main()
     }
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
-        c.driveCurrentLimit = 1000;
-        c.steerCurrentLimit = 1000;
-        c.frictionVoltage = 1;
+        auto c = SyntheticDrivePhysicsConfig();
+        c.driveMotor.currentLimitAmps = 1000;
+        c.steerMotor.currentLimitAmps = 1000;
+        c.driveMotor.frictionVoltage = 1;
+        c.steerMotor.frictionVoltage = 1;
         DrivePhysics d(w, c);
         for (size_t i = 0; i < 4; ++i)
             d.SetModuleVoltages(i, 6, 0);
@@ -213,9 +216,9 @@ int main()
 
     {
         SimulationWorld w(Backend::Planar);
-        DrivePhysicsConfig c;
-        c.driveCurrentLimit = 10;
-        c.frictionVoltage = 0;
+        auto c = SyntheticDrivePhysicsConfig();
+        c.driveMotor.currentLimitAmps = 10;
+        c.driveMotor.frictionVoltage = 0;
         c.wheelInertia = 1e9;
         DrivePhysics d(w, c);
         for (double command : {6., -6.})
@@ -223,7 +226,7 @@ int main()
             for (size_t i = 0; i < 4; ++i)
                 d.SetModuleVoltages(i, command, 0);
             d.BeforePhysics(.004);
-            const double expected = 4 * 10 * 10 * c.motorResistance / 12;
+            const double expected = 4 * 10 * 10 * c.driveMotor.resistanceOhms / 12;
             Check(std::abs(d.SupplyCurrent(12) - expected) < 1e-8);
         }
     }

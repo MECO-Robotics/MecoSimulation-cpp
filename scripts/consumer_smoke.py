@@ -23,7 +23,7 @@ def main() -> None:
     parser.add_argument("--warm-dependencies", action="store_true", help="Resolve dependencies only; does not compile or validate the consumer")
     parser.add_argument("--offline", action="store_true", help="Require dependencies to be present in the warmed Gradle cache")
     parser.add_argument("--meco-base-root", type=Path, required=True)
-    parser.add_argument("--expected-base-version", default="2026.2.12")
+    parser.add_argument("--expected-base-version", default="2026.2.17-beta.5")
     args = parser.parse_args()
     if args.warm_dependencies and args.offline:
         parser.error("--offline cannot be used while warming dependencies")
@@ -159,7 +159,6 @@ model {
 #include <meco/sim/DriveTuning.h>
 #include <meco/sim/SimulatedPieceSensor.h>
 #include <meco/sim/PracticeMatchController.h>
-#include <base/sim/fields/Rebuilt2026.h>
 
 int RunDriveSmoke();
 
@@ -208,8 +207,10 @@ int main() {
       retained.massKg != 62 || derived.massKg != 62) return 55;
   std::vector<meco::sim::Particle> ground, airborne;
   meco::sim::ResolveParticleContacts(ground, airborne, {}, .1, 0, 0, {});
-  const meco::sim::ParticleFieldContacts field{base::sim::fields::rebuilt2026::ParticleFieldColliders()};
-  ground.push_back({{.03, 2, .5}, {-1, 0, 0}});
+  base::sim::BodySpec particleWall;
+  particleWall.halfExtents = {.01, .5, .5};
+  const meco::sim::ParticleFieldContacts field{{particleWall}};
+  ground.push_back({{.03, 0, .5}, {-1, 0, 0}});
   field.Resolve(ground, .07, .25);
   if (ground.front().position.x < .069 || ground.front().velocity.x <= 0) return 44;
   meco::sim::PieceSensorConfig sensorConfig;
@@ -307,7 +308,6 @@ int main() {
 #include <meco/sim/FootprintNavigation.h>
 #include <meco/sim/SimulationPower.h>
 #include <meco/sim/PracticeMatchController.h>
-#include <base/sim/fields/Rebuilt2026.h>
 
 class Module final : public base::SwerveModuleIO {
  public:
@@ -334,6 +334,43 @@ int RunDriveSmoke() {
   int result = 1;
   {
   base::DriveConfig config{};
+  // Keep the consumer fixture self-contained: MecoSimulation now requires a
+  // caller-supplied physical and motor profile rather than inferring one.
+  // These values are synthetic smoke-test geometry, not a robot preset.
+  config.massKg = 37.2;
+  config.moi = 2.4;
+  config.cof = 0.91;
+  config.wheelRadius = 0.061;
+  config.driveRatio = 5.8;
+  config.steerRatio = 18.4;
+  config.driveCurrent = 58;
+  config.steerCurrent = 29;
+  config.slipCurrent = 64;
+  config.modules = {{{11, 21, 31, 0, .25, .22}, {12, 22, 32, 0, .25, -.22},
+                     {13, 23, 33, 0, -.25, .22}, {14, 24, 34, 0, -.25, -.22}}};
+  auto& physics = config.simulation;
+  physics.bumperHalfLength = .31;
+  physics.bumperHalfWidth = .27;
+  physics.bumperHalfHeight = .08;
+  physics.bumperWallThickness = .032;
+  physics.bumperCornerRadius = .021;
+  physics.bumperFriction = .52;
+  physics.rideHeight = .24;
+  physics.rollInertia = 2.1;
+  physics.pitchInertia = 2.3;
+  physics.wheelInertia = .014;
+  physics.steerInertia = .002;
+  physics.longitudinalStiffness = 1100;
+  physics.lateralStiffness = 1300;
+  physics.suspensionRestLength = .24;
+  physics.suspensionTravel = .10;
+  physics.suspensionStiffness = 4200;
+  physics.suspensionDamping = 480;
+  physics.wheelWidth = .036;
+  physics.contactPatchLength = .017;
+  physics.contactShearDeflection = .0013;
+  physics.driveMotor = {.05, .018, 48, 58, .08};
+  physics.steerMotor = {.05, .018, 48, 29, .08};
   config.backend = base::DriveBackend::SparkMaxNavX;
   config.simulation.modules[0].driveOrientation =
       base::SimulationDeviceOrientation::CounterClockwisePositive;
@@ -389,8 +426,7 @@ int RunDriveSmoke() {
   }
   auto simulation = meco::sim::CreateDriveSimulationAdapter(config, base::sim::Backend::Full3D);
   simulation->Reset(frc::Pose2d{});
-  if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w) ||
-      base::sim::fields::rebuilt2026::FieldColliders().size() != 40) return 3;
+  if (!std::isfinite(simulation->PhysicsTruth().body.pose.rotation.w)) return 3;
   auto& arena = simulation->CreateArena(base::sim::ArenaScene::Generic);
   drive.SetSimulationAdapter(std::move(simulation));
   drive.ResetSimulation(frc::Pose2d{});

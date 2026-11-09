@@ -1,5 +1,6 @@
 #include "meco/sim/PracticeMatchController.h"
 #include <base/Replay.h>
+#include <base/Telemetry.h>
 #include <frc2/command/Commands.h>
 #include <frc/simulation/DriverStationSim.h>
 #ifndef __FRC_ROBORIO__
@@ -17,6 +18,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 #include <algorithm>
 namespace meco::sim {
 using DS = frc::sim::DriverStationSim;
@@ -66,12 +68,34 @@ struct PracticeMatchController::Impl {
     Publish();
   }
   void Packet() { HALSIM_NotifyDriverStationNewData(); }
+  void PublishReason(std::string reason) {
+    auto entry=table->GetEntry("Reason");
+    base::telemetry::Post("Practice/Reason", [entry, reason=std::move(reason)]() mutable { entry.SetString(reason); });
+  }
+  void PublishCommandResult(std::string command, bool accepted) {
+    auto lastCommand=table->GetEntry("LastCommand");
+    auto acceptedEntry=table->GetEntry("LastCommandAccepted");
+    base::telemetry::Post("Practice/CommandResult",
+      [lastCommand, acceptedEntry, command=std::move(command), accepted]() mutable {
+        lastCommand.SetString(command);
+        acceptedEntry.SetBoolean(accepted);
+      });
+  }
   void Publish() {
-    table->GetEntry("State").SetString(state);
-    table->GetEntry("Running").SetBoolean(running);
-    table->GetEntry("RemainingSeconds").SetDouble(remaining);
-    table->GetEntry("MatchTime").SetDouble(DS::GetMatchTime());
-    table->GetEntry("GameData").SetString(frc::DriverStation::GetGameSpecificMessage());
+    const auto stateValue=state;
+    const bool runningValue=running;
+    const double remainingValue=remaining;
+    const double matchTime=DS::GetMatchTime();
+    const auto gameData=frc::DriverStation::GetGameSpecificMessage();
+    auto tableHandle=table;
+    base::telemetry::Post("Practice/Status",
+      [table=std::move(tableHandle), stateValue, runningValue, remainingValue, matchTime, gameData] {
+        table->GetEntry("State").SetString(stateValue);
+        table->GetEntry("Running").SetBoolean(runningValue);
+        table->GetEntry("RemainingSeconds").SetDouble(remainingValue);
+        table->GetEntry("MatchTime").SetDouble(matchTime);
+        table->GetEntry("GameData").SetString(gameData);
+      });
   }
   void Finish(const std::string& next, const std::string& reason) {
     WriteScope scope(this);
@@ -82,7 +106,7 @@ struct PracticeMatchController::Impl {
     DS::SetAllianceStationId(oldAlliance);
     HALSIM_SetMatchInfo(&oldInfo);
     state=next; remaining=0;
-    table->GetEntry("Reason").SetString(reason);
+    PublishReason(reason);
     Packet();
     // WPILib's new-data notification itself sets DS attached. Restore the
     // saved raw flag after notifying; the next external packet may attach again.
@@ -94,16 +118,16 @@ struct PracticeMatchController::Impl {
       else if(command=="reset") {state="idle";remaining=0;}
       return true;
     }
-    if(command!="start") { table->GetEntry("Reason").SetString("unknown-command");return false; }
+    if(command!="start") { PublishReason("unknown-command");return false; }
     if(running || DS::GetEnabled() || DS::GetEStop()) {
-      table->GetEntry("Reason").SetString("start-requires-disabled-and-no-estop");return false;
+      PublishReason("start-requires-disabled-and-no-estop");return false;
     }
     const auto station=table->GetEntry("Config/AllianceStation").GetString("Blue1");
     const std::vector<std::string> stations{"Red1","Red2","Red3","Blue1","Blue2","Blue3"};
     const auto found=std::find(stations.begin(),stations.end(),station);
     const auto chosen=table->GetEntry("Config/AutoResult").GetString("R");
     if(found==stations.end() || (chosen!="R"&&chosen!="B")) {
-      table->GetEntry("Reason").SetString("invalid-configuration");return false;
+      PublishReason("invalid-configuration");return false;
     }
     oldDs=DS::GetDsAttached();oldFms=DS::GetFmsAttached();oldAlliance=DS::GetAllianceStationId();
     HALSIM_GetMatchInfo(&oldInfo);
@@ -125,8 +149,7 @@ struct PracticeMatchController::Impl {
     }
     for(const auto& update:commands.ReadQueue()) {
       bool accepted=Command(update.value);
-      table->GetEntry("LastCommand").SetString(update.value);
-      table->GetEntry("LastCommandAccepted").SetBoolean(accepted);
+      PublishCommandResult(update.value, accepted);
     }
     if(running) {
       WriteScope scope(this);

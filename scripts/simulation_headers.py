@@ -23,10 +23,12 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/FootprintNavigation.h",
     "meco/sim/SimulationPower.h",
     "meco/sim/SimulationLifecycle.h",
+    "meco/sim/RobotSimulationRuntime.h",
     "meco/sim/SimulationNetwork.h",
     "meco/sim/SimulationPose.h",
     "meco/sim/SimulatedVision.h",
     "meco/sim/SimulatedVisionSource.h",
+    "meco/sim/SimulatedTagCamera.h",
     "meco/sim/IdealVisionObservation.h",
     "meco/sim/ParticleContacts.h",
     "meco/sim/ParticleFieldContacts.h",
@@ -36,7 +38,6 @@ REQUIRED_SIMULATION_HEADERS = {
     "meco/sim/LoadedMotorIO.h",
     "meco/sim/MotorSimulationFactories.h",
     "meco/sim/SimulationDiagnostics.h",
-    "base/sim/fields/Rebuilt2026.h",
 }
 
 

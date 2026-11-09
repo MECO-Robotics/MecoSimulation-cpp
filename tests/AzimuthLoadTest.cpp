@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -11,12 +12,7 @@ void Check(bool ok,std::source_location at=std::source_location::current()) {
     if(!ok) throw std::runtime_error("Azimuth load contract at line "+std::to_string(at.line()));
 }
 DrivePhysicsConfig Config() {
-    DrivePhysicsConfig c;
-    c.mass=67.6; c.friction=2.1; c.driveRatio=5.8909090909090915; c.steerRatio=12.1;
-    c.wheelInertia=.01; c.steerInertia=.01; c.driveCurrentLimit=50; c.steerCurrentLimit=30;
-    c.motorResistance=12./483; c.motorKt=9.37/483;
-    c.motorKv=(5800.*2*std::acos(-1.)/60)/(12-2*c.motorResistance);
-    return c;
+    return SyntheticDrivePhysicsConfig();
 }
 void Step(SimulationWorld& w,DrivePhysics& d,double dt=.001) { d.BeforePhysics(dt);w.Step(dt);d.AfterPhysics(dt); }
 // A restrained chassis is a steering dynamometer. Moving the belt underneath
@@ -27,7 +23,7 @@ ModulePhysicsState Dynamometer(double mass,double rolling) {
     const auto initial=w.ReadBody(d.Body());
     for(int i=0;i<1300;++i) {
         auto held=initial;held.linearVelocity.x=rolling;w.SetBodyState(d.Body(),held);
-        d.SetModuleVoltages(0,rolling==0?0:c.driveRatio*rolling/c.wheelRadius/c.motorKv+c.frictionVoltage,
+        d.SetModuleVoltages(0,rolling==0?0:c.driveRatio*rolling/c.wheelRadius/c.driveMotor.velocityConstantRadPerSecPerVolt+c.driveMotor.frictionVoltage,
                             i<300?0:.3);
         Step(w,d);
     }
@@ -48,7 +44,8 @@ double Energy(const DriveTruth&t,const DrivePhysicsConfig&c) {
 }
 }
 int main() {
-    const auto stationary=Dynamometer(67.6,0), heavy=Dynamometer(135.2,0), rolling=Dynamometer(67.6,2);
+    const double robotMass=Config().mass;
+    const auto stationary=Dynamometer(robotMass,0), heavy=Dynamometer(2*robotMass,0), rolling=Dynamometer(robotMass,2);
     // Static tire shear holds at finite deflection; more load increases stiffness.
     Check(std::abs(stationary.steerVelocity)<.01 && stationary.steerAngle>.005 && stationary.steerAngle<.1);
     Check(heavy.steerAngle<stationary.steerAngle*.7);
@@ -77,7 +74,7 @@ int main() {
                 const auto&m=after.modules[j];
                 Check(std::sqrt(m.longitudinalForce*m.longitudinalForce+m.lateralForce*m.lateralForce+
                       m.azimuthGroundTorque*m.azimuthGroundTorque/(r*r))<=c.friction*m.normalForce+1e-7);
-                Check(std::abs(m.steerCurrent)<=30+1e-8 && std::abs(m.driveCurrent)<=50+1e-8);
+                Check(std::abs(m.steerCurrent)<=c.steerMotor.currentLimitAmps+1e-8 && std::abs(m.driveCurrent)<=c.driveMotor.currentLimitAmps+1e-8);
                 Check(std::abs(c.steerInertia*(m.steerVelocity-before.modules[j].steerVelocity)/.001-
                                m.steerMotorTorque-m.azimuthGroundTorque)<1e-6);
             }

@@ -1,4 +1,6 @@
 #include "base/sim/SimulationWorld.h"
+#include "base/sim/DrivePhysics.h"
+#include "TestDrivePhysicsConfig.h"
 #include <cmath>
 #include <iostream>
 #include <source_location>
@@ -11,14 +13,16 @@ void Check(bool ok, std::source_location at=std::source_location::current()) {
 }
 BodySpec Bumper() {
     BodySpec b;
+    const auto c = SyntheticDrivePhysicsConfig();
     b.shape=BodySpec::Shape::BumperRing;
-    b.halfExtents={.43,.43,.06985};
-    b.radius=.0889;
-    b.friction=.65;
-    b.mass=67.6;
-    b.inertia={4,4,6.883};
-    b.centerOfMass.z=.2238;
-    b.pose.position.z=.0762;
+    b.halfExtents=c.bumperHalfExtents;
+    b.radius=c.bumperWallThickness;
+    b.cornerRadius=c.bumperCornerRadius;
+    b.friction=c.bumperFriction;
+    b.mass=c.mass;
+    b.inertia=c.inertia;
+    b.centerOfMass=c.centerOfMass;
+    b.pose.position.z=c.rideHeight;
     return b;
 }
 }
@@ -29,9 +33,9 @@ int main() {
         auto b=Bumper(); b.mass=0; b.pose.position.z=.5;
         const auto ring=w.CreateBody(b);
         Check(!w.Raycast({0,0,1},{0,0,-1}));
-        const auto edge=w.Raycast({.4,0,1},{0,0,-1});
-        Check(edge && edge->body==ring && std::abs(edge->position.z-.56985)<.001);
-        b.radius=.43;
+        const auto edge=w.Raycast({b.halfExtents.x - b.radius / 2,0,1},{0,0,-1});
+        Check(edge && edge->body==ring && std::abs(edge->position.z-(.5+b.halfExtents.z))<.001);
+        b.radius=b.halfExtents.x;
         bool rejected=false;
         try { w.CreateBody(b); } catch(const std::invalid_argument&) { rejected=true; }
         Check(rejected);
@@ -47,9 +51,9 @@ int main() {
         for(int i=0;i<3000;++i) {
             w.Step(.001); touched=touched || w.ContactManifoldCount()>0;
             auto s=w.ReadBody(body); const auto q=s.pose.rotation;
-            const double r=kBumperCornerRadius;
-            const double lowest=s.pose.position.z-(.43-r)*std::abs(2*(q.x*q.z-q.w*q.y))
-                -(.43-r)*std::abs(2*(q.y*q.z+q.w*q.x))-(.06985-r)*std::abs(1-2*(q.x*q.x+q.y*q.y))-r;
+            const double r=b.cornerRadius;
+            const double lowest=s.pose.position.z-(b.halfExtents.x-r)*std::abs(2*(q.x*q.z-q.w*q.y))
+                -(b.halfExtents.y-r)*std::abs(2*(q.y*q.z+q.w*q.x))-(b.halfExtents.z-r)*std::abs(1-2*(q.x*q.x+q.y*q.y))-r;
             Check(lowest>-.005);
         }
         Check(touched && w.ReadBody(body).pose.position.z>.06);
@@ -59,13 +63,13 @@ int main() {
         SimulationWorld w(Backend::Planar);
         BodySpec obstacle; obstacle.halfExtents={.04,1,height/2}; obstacle.pose.position={1,0,height/2};
         w.CreateBody(obstacle);
-        auto b=Bumper(); b.planar=true; const auto body=w.CreateBody(b);
+        auto b=Bumper(); b.planar=true; b.pose.position.z=b.halfExtents.z+.01; const auto body=w.CreateBody(b);
         w.SetLinearVelocity(body,{1,0,0});
         bool touched=false;
         for(int i=0;i<1500;++i) { w.Step(.001); touched=touched || w.ContactManifoldCount()>0; }
         const auto s=w.ReadBody(body);
-        if(height<.00635) Check(!touched && s.pose.position.x>1.4);
-        else Check(touched && s.pose.position.x<.55 && std::abs(s.linearVelocity.x)<.01);
+        if(height<.006) Check(!touched && s.pose.position.x>1.4);
+        else Check(touched && s.pose.position.x<.60 && std::abs(s.linearVelocity.x)<.01);
     }
     // A sloped plate also makes contact before the bumper can pass through it.
     {

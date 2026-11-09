@@ -28,10 +28,12 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "adapters/wpilib-2026/include/meco/sim/FootprintNavigation.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationPower.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationLifecycle.h",
+                root / "adapters/wpilib-2026/include/meco/sim/RobotSimulationRuntime.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationNetwork.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationPose.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulatedVision.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulatedVisionSource.h",
+                root / "adapters/wpilib-2026/include/meco/sim/SimulatedTagCamera.h",
                 root / "adapters/wpilib-2026/include/meco/sim/IdealVisionObservation.h",
                 root / "adapters/wpilib-2026/include/meco/sim/ParticleContacts.h",
                 root / "adapters/wpilib-2026/include/meco/sim/ParticleFieldContacts.h",
@@ -41,7 +43,6 @@ class SimulationHeadersTest(unittest.TestCase):
                 root / "adapters/wpilib-2026/include/meco/sim/LoadedMotorIO.h",
                 root / "adapters/wpilib-2026/include/meco/sim/MotorSimulationFactories.h",
                 root / "adapters/wpilib-2026/include/meco/sim/SimulationDiagnostics.h",
-                root / "include/base/sim/fields/Rebuilt2026.h",
             )
             for path in owned:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,10 +70,12 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/FootprintNavigation.h",
                 "meco/sim/SimulationPower.h",
                 "meco/sim/SimulationLifecycle.h",
+                "meco/sim/RobotSimulationRuntime.h",
                 "meco/sim/SimulationNetwork.h",
                 "meco/sim/SimulationPose.h",
                 "meco/sim/SimulatedVision.h",
                 "meco/sim/SimulatedVisionSource.h",
+                "meco/sim/SimulatedTagCamera.h",
                 "meco/sim/IdealVisionObservation.h",
                 "meco/sim/ParticleContacts.h",
                 "meco/sim/ParticleFieldContacts.h",
@@ -82,7 +85,6 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/LoadedMotorIO.h",
                 "meco/sim/MotorSimulationFactories.h",
                 "meco/sim/SimulationDiagnostics.h",
-                "base/sim/fields/Rebuilt2026.h",
             })
 
     def test_rejects_base_headers_in_simulation_archive(self):
@@ -103,10 +105,12 @@ class SimulationHeadersTest(unittest.TestCase):
                 "meco/sim/FootprintNavigation.h",
                 "meco/sim/SimulationPower.h",
                 "meco/sim/SimulationLifecycle.h",
+                "meco/sim/RobotSimulationRuntime.h",
                 "meco/sim/SimulationNetwork.h",
                 "meco/sim/SimulationPose.h",
                 "meco/sim/SimulatedVision.h",
                 "meco/sim/SimulatedVisionSource.h",
+                "meco/sim/SimulatedTagCamera.h",
                 "meco/sim/IdealVisionObservation.h",
                 "meco/sim/ParticleContacts.h",
                 "meco/sim/ParticleFieldContacts.h",
@@ -116,7 +120,6 @@ class SimulationHeadersTest(unittest.TestCase):
             "meco/sim/LoadedMotorIO.h",
                 "meco/sim/MotorSimulationFactories.h",
             "meco/sim/SimulationDiagnostics.h",
-            "base/sim/fields/Rebuilt2026.h",
         }
         with self.assertRaisesRegex(ValueError, "Base-owned headers.*base/Drive.h"):
             validate_simulation_header_names(valid | {"base/Drive.h"})

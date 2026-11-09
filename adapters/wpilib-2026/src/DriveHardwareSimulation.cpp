@@ -1,4 +1,5 @@
 #include "base/Drive.h"
+#include <base/Telemetry.h>
 #include "meco/sim/SimulationDiagnostics.h"
 #include "base/PortableSwerve.h"
 
@@ -7,6 +8,8 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <memory>
+#include <utility>
 
 namespace p = ctre::phoenix6;
 
@@ -63,9 +66,10 @@ std::array<std::array<double, 2>, 4> Drive::SimulationVoltages(double dt, double
                 sample[2 + 3*i] = state.GetTorqueCurrent().value();
                 sample[3 + 3*i] = state.GetSupplyCurrent().value();
             }
-            static auto publisher = nt::NetworkTableInstance::GetDefault()
-                .GetDoubleArrayTopic("/Diagnostics/Drive/MotorElectrical").Publish();
-            publisher.Set(sample);
+            static auto publisher = std::make_shared<nt::DoubleArrayPublisher>(
+                nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Diagnostics/Drive/MotorElectrical").Publish());
+            base::telemetry::Post("Diagnostics/Drive/MotorElectrical",
+                [publisher, sample] { publisher->Set(sample); });
         }
     }
     return result;

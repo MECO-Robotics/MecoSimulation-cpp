@@ -21,7 +21,7 @@ The physics library has two backends. `jolt-3d` models vertical motion and full 
 
 ## Drive and arena models
 
-`DrivePhysics` consumes four module voltage pairs and reports body pose, velocity, and module state. `DrivePhysicsConfig` uses SI units and accepts the robot geometry, mass properties, gearing, wheel parameters, tire coefficients, and current limits. Defaults are illustrative; use measured robot values for studies.
+`DrivePhysics` consumes four module voltage pairs and reports body pose, velocity, and module state. `DrivePhysicsConfig` uses SI units and requires the robot geometry, mass properties, gearing, wheel parameters, tire coefficients, and separate drive/steer motor models. A value-initialized config is invalid; supply a complete robot profile.
 
 The WPILib bridge reads Phoenix applied voltages and feeds back Jolt rotor,
 CANcoder and gyro measurements. Do not call Phoenix `UpdateSimState()` in this

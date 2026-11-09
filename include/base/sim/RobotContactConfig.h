@@ -3,16 +3,17 @@
 
 namespace base::sim
 {
-// All geometry is in metres relative to the unloaded carpet. Estimates, not calibration.
+// All geometry is in metres relative to the unloaded carpet. No robot profile is
+// implied; callers must fill every field before passing this to a contact model.
 struct RobotContactConfig
 {
-    double chassisClearance{.0508}, panThickness{.003175};
-    double panHalfLength{.3411}, panHalfWidth{.3411};
-    double bumperFloorGap{.00635}, noodleDiameter{.06985};
-    double backingThickness{.01905}, backingHeight{.127}, backingFloorGap{.00635};
-    std::array<double, 5> compressionStrain{0, .25, .5, .7, .8};
-    std::array<double, 5> compressionStressPa{0, 10000, 35000, 100000, 250000};
-    double dampingRatio{.8}, friction{.65};
+    double chassisClearance{}, panThickness{};
+    double panHalfLength{}, panHalfWidth{};
+    double bumperFloorGap{}, noodleDiameter{};
+    double backingThickness{}, backingHeight{}, backingFloorGap{};
+    std::array<double, 5> compressionStrain{};
+    std::array<double, 5> compressionStressPa{};
+    double dampingRatio{}, friction{};
 };
 struct FoamResponse
 {

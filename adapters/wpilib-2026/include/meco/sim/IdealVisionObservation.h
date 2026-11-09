@@ -27,9 +27,9 @@ struct IdealVisionObservation {
 inline std::optional<IdealVisionObservation> MakeIdealVisionObservation(
     const frc::Pose3d& truth, units::second_t timestamp,
     const frc::AprilTagFieldLayout& layout, bool hasFix,
-    units::meter_t maxAbsHeight, std::array<double, 3> stdDevs) {
-    if (!std::isfinite(timestamp.value()) || !std::isfinite(maxAbsHeight.value()) ||
-        maxAbsHeight.value() < 0 ||
+    units::meter_t maxAbsTruthHeight, std::array<double, 3> stdDevs) {
+    if (!std::isfinite(timestamp.value()) || !std::isfinite(maxAbsTruthHeight.value()) ||
+        maxAbsTruthHeight.value() < 0 ||
         !std::all_of(stdDevs.begin(), stdDevs.end(),
                      [](double deviation) { return std::isfinite(deviation) && deviation >= 0; }))
         throw std::invalid_argument("Invalid ideal vision observation configuration");
@@ -38,7 +38,7 @@ inline std::optional<IdealVisionObservation> MakeIdealVisionObservation(
           std::isfinite(q.Y()) && std::isfinite(q.Z()) &&
           truth.X().value() >= 0 && truth.Y().value() >= 0 &&
           truth.X() <= layout.GetFieldLength() && truth.Y() <= layout.GetFieldWidth() &&
-          std::abs(truth.Z().value()) <= maxAbsHeight.value())) return std::nullopt;
+          std::abs(truth.Z().value()) <= maxAbsTruthHeight.value())) return std::nullopt;
     return IdealVisionObservation{truth.ToPose2d(), timestamp, stdDevs};
 }
 }

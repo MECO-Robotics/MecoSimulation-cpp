@@ -6,26 +6,35 @@
 
 namespace base::sim
 {
-// SI throughout, including motor/wheel angles in radians. Defaults are illustrative.
+// Electrical and current-limit properties for one motor group.
+struct MotorSimulationConfig
+{
+    double resistanceOhms{};
+    double torqueConstantNmPerAmp{};
+    double velocityConstantRadPerSecPerVolt{};
+    double currentLimitAmps{};
+    double frictionVoltage{};
+};
+
+// SI throughout, including motor/wheel angles in radians. Every physical
+// property must be supplied by the caller; a value-initialized config is invalid.
 struct DrivePhysicsConfig
 {
-    double mass{74.088};
-    Vec3 inertia{4.0, 4.0, 6.883}, centerOfMass{};
-    Vec3 bumperHalfExtents{.43, .43, .12};
-    double rideHeight{.30}, wheelRadius{.0508};
-    double driveRatio{6.122448979591837}, steerRatio{150.0 / 7.0}, couplingRatio{};
-    double wheelInertia{.025}, steerInertia{.004};
-    double friction{1.2}, longitudinalStiffness{1800}, lateralStiffness{1800};
+    double mass{};
+    Vec3 inertia{}, centerOfMass{};
+    Vec3 bumperHalfExtents{};
+    double bumperWallThickness{}, bumperCornerRadius{};
+    double bumperFriction{};
+    double rideHeight{}, wheelRadius{};
+    double driveRatio{}, steerRatio{}, couplingRatio{};
+    double wheelInertia{}, steerInertia{};
+    double friction{}, longitudinalStiffness{}, lateralStiffness{};
     // Legacy ABI fields; rigid wheel contact does not use spring/travel parameters.
-    double suspensionRestLength{.30}, suspensionTravel{.15};
-    double suspensionStiffness{6000}, suspensionDamping{650};
-    double motorResistance{12.0 / 366}, motorKt{7.09 / 366}, motorKv{55.0};
-    double driveCurrentLimit{80}, steerCurrentLimit{40}, frictionVoltage{.1};
-    std::array<Vec3, 4> moduleLocations{
-        {{.33655, .33655, 0}, {.33655, -.33655, 0}, {-.33655, .33655, 0}, {-.33655, -.33655, 0}}};
-    // Estimated rectangular contact patch and elastic shear travel at breakaway.
-    // These extend the physics ABI: rebuild every direct DrivePhysics owner.
-    double wheelWidth{.0508}, contactPatchLength{.020}, contactShearDeflection{.001};
+    double suspensionRestLength{}, suspensionTravel{};
+    double suspensionStiffness{}, suspensionDamping{};
+    MotorSimulationConfig driveMotor{}, steerMotor{};
+    std::array<Vec3, 4> moduleLocations{};
+    double wheelWidth{}, contactPatchLength{}, contactShearDeflection{};
 };
 struct ModulePhysicsState
 {
@@ -47,7 +56,7 @@ struct DriveTruth
 class DrivePhysics
 {
   public:
-    DrivePhysics(SimulationWorld &, DrivePhysicsConfig = {});
+    DrivePhysics(SimulationWorld &, DrivePhysicsConfig);
     DrivePhysics(SimulationWorld &, DrivePhysicsConfig, const RobotContactConfig &);
     ~DrivePhysics();
     DrivePhysics(const DrivePhysics &) = delete;

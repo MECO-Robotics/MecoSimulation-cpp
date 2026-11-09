@@ -7,9 +7,11 @@
 #include "base/Telemetry.h"
 #include <cstdlib>
 #include <string_view>
+#include <utility>
 #include <frc/DriverStation.h>
 #include <hal/simulation/DriverStationData.h>
 #include <frc/RobotController.h>
+#include <memory>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/NetworkTableInstance.h>
 #include <ntcore_cpp.h>
@@ -50,17 +52,19 @@ inline void EndLatencyProbe() {
   if (!LatencyProbeEnabled()) return;
   latencySample[1]=nt::Now();
   latencySample[5]=frc::RobotController::GetFPGATime();
-  static auto publisher=nt::NetworkTableInstance::GetDefault()
-      .GetDoubleArrayTopic("/Diagnostics/Latency/RobotLoop").Publish();
-  publisher.Set(latencySample);
+  static auto publisher=std::make_shared<nt::DoubleArrayPublisher>(
+      nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Diagnostics/Latency/RobotLoop").Publish());
+  const auto robotLoopSample=latencySample;
+  base::telemetry::Post("Diagnostics/Latency/RobotLoop",
+      [publisher, robotLoopSample] { publisher->Set(robotLoopSample); });
   auto captured=latencySample;
   base::telemetry::Post("LatencyProbe", [captured] {
     std::array<double,10> queued{};
     std::copy(captured.begin(),captured.end(),queued.begin());
     queued[9]=nt::Now();
-    static auto background=nt::NetworkTableInstance::GetDefault()
-        .GetDoubleArrayTopic("/Diagnostics/Latency/Background").Publish();
-    background.Set(queued);
+    static auto background=std::make_shared<nt::DoubleArrayPublisher>(
+        nt::NetworkTableInstance::GetDefault().GetDoubleArrayTopic("/Diagnostics/Latency/Background").Publish());
+    background->Set(queued);
   });
 }
 }

@@ -28,14 +28,14 @@ class SimulatedVisionSource {
 
   void Update(const frc::Pose3d& truth, units::second_t timestamp,
               const frc::AprilTagFieldLayout& layout, bool hasFix,
-              units::meter_t maxAbsHeight, std::array<double, 3> stdDevs,
+              units::meter_t maxAbsTruthHeight, std::array<double, 3> stdDevs,
               bool connected, bool tracking, bool aligned) {
     base::VisionInputs next;
     next.connected = connected;
     next.tracking = tracking;
     next.aligned = aligned;
     const auto observation = MakeIdealVisionObservation(truth, timestamp, layout,
-                                                         hasFix, maxAbsHeight, stdDevs);
+                                                         hasFix, maxAbsTruthHeight, stdDevs);
     if (observation)
       next.observations.push_back({observation->pose, observation->timestamp, observation->stdDevs});
     *inputs_ = std::move(next);

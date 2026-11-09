@@ -60,10 +60,10 @@ build tools, and CMake installed, run
 then `python3 scripts/build_local_release.py assemble --base-root <base-checkout>`.
 The packager validates the local build provenance and writes `build/vendor-maven`.
 
-Before the next release, update the descriptor version and `jsonUrl` and the
-package and verifier version constants together. Use a new immutable version and
-tag; do not republish the existing 2026.0.21 coordinate with the changed platform
-list.
+For each release, keep the descriptor version and `jsonUrl`, package and
+verifier version constants, and compatible Base version in provenance checks in
+sync. Use a new immutable version and tag; the existing 2026.0.21 coordinate
+remains unchanged.
 
 Create a release tag for the same commit, then package and attach the local
 Maven tree to a GitHub release (creating the release itself is a separate step):
@@ -79,10 +79,10 @@ coordinates. Production checks validate the deployed package and public
 consumer links. A skipped or failed check remains unverified.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. The current package requires Base 2026.2.12 and Simulation
-2026.0.21. This pair rebuilds the adapter for the configurable control-timing
-and CAN-rate APIs; use these matching packages together rather than mixing the
-new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
+2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.5 and MECO
+Simulation 2026.0.23-beta.2. It includes explicit robot contact profiles and
+generic bumper dimensions; use these matching packages together rather than
+mixing the new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. Public consumer checks use the matching Base vendordep; Base and Simulation remain separate published vendordeps.
@@ -107,7 +107,7 @@ python3 scripts/consumer_smoke.py --target desktop --configuration Release \
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
 MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
-shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, drivetrain tuning estimates and reusable 2026 field geometry. Applications own hardware
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, and drivetrain tuning estimates. Applications own hardware
 parameters, commands, robot-specific game-piece behavior, starting-pose policy and
 telemetry presentation. Applications must not copy `base/sim` headers or replace
 Simulation archive objects.
@@ -129,8 +129,7 @@ forces on that body.
 2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
 support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
 body orientation/contact loads without adding fields to the Base ABI. Field maps
-are available through `base/sim/fields/Rebuilt2026.h`. Battery and diagnostic
-helpers are public `meco/sim` headers. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
+helpers are public `meco/sim` headers. Season field geometry stays in the consuming robot project. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
 see the [release validation](docs/releases/2026.0.9.md).
 
 ## Native AutoDrive and practice control
@@ -178,18 +177,19 @@ scheduling, or mechanism IO adapters.
 (`cof`), module positions, wheel radius, drive/steer/coupling ratios, current
 limits, inversion, and CANcoder offsets. `DriveConfig::simulation` supplies
 bumper half dimensions, body-origin ride height, center of mass relative to that
-origin, roll/pitch inertia, wheel/steer inertia and tire stiffness. Legacy
+origin, roll/pitch inertia, wheel/steer inertia, tire stiffness, bumper corner
+radius and bumper friction. `driveMotor` and `steerMotor` each provide the
+electrical model, current limit and friction voltage. Legacy
 suspension fields remain in the ABI but are unused by rigid wheel contact.
 Lengths are metres, mass kilograms, inertia kg m², and tire stiffness uses SI.
-The WPILib adapter uses Kraken X60 FOC constants for native Phoenix swerve
-(which enables FOC), with `slipCurrent` as the motor-side torque limit.
-`driveCurrent` is Phoenix's separate battery-side supply limit; it must not be
-used as stator current. SparkMax uses NEO constants and its motor-side
-`driveCurrent` SmartCurrentLimit. Native controller output still includes its
-configured limits. The electrical plant produces speed-dependent motoring and
-braking torque from voltage and back-EMF rather than a fixed deceleration rate.
-The portable `DrivePhysicsConfig` additionally exposes motor resistance, torque
-constant, velocity constant, and friction voltage. Invalid/nonfinite physical
+The robot supplies separate `DriveSimulationConfig::driveMotor` and
+`steerMotor` models: resistance, torque constant, velocity constant, current
+limit, and friction voltage. MecoSimulation does not infer a motor model from
+the hardware backend. Native controller output still includes its configured
+limits. The electrical plant produces speed-dependent motoring and braking
+torque from voltage and back-EMF rather than a fixed deceleration rate.
+`DrivePhysicsConfig` requires the physical model, motor models, bumper corner
+radius, and tire-contact parameters explicitly. Invalid or nonfinite physical
 parameters throw during construction.
 
 Planar mode fixes chassis Z, pitch, and roll. Full 3D uses four finite-cylinder wheel
@@ -199,13 +199,14 @@ travel or static sag. The 1 cm query margin and 0.1 mm penetration slop are
 numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
 forces are capped by the solved normal reactions. Motor current and wheel inertia
 affect acceleration; forces act at contact points. The bumper is one rigid body with four compound box segments forming a hollow
-perimeter (nominal 3.5-inch depth, reduced for very small test bodies). Its centre
+perimeter whose envelope and wall thickness come from `DrivePhysicsConfig`. Its centre
 and half-height come from body ride height and bumper half extents; configure
 these together with the relative CoM to preserve the intended world CoM height.
 The shell contacts ground, slopes and obstacles through Jolt, independently of
 wheel-support queries. The centre opening does not create an invisible belly plate.
-Bumper friction is 0.65 with zero restitution; Jolt combines material friction.
-This is rigid contact, not measured foam compression or impact-energy absorption.
+Bumper friction comes from the robot simulation profile; Jolt combines material
+friction. This is rigid contact, not measured foam compression or impact-energy
+absorption.
 `BodySpec::Shape::BumperRing` uses `radius` as wall thickness and preserves the
 existing structure layout; invalid thickness which closes the centre is rejected.
 Cylinder queries model finite tire volume, but not tire deformation, individual spikes or sidewalls;
@@ -222,15 +223,15 @@ torsion is projected onto the steering axis, including the remaining constrained
 moment on a tilted chassis. This is an approximate lumped contact model, not a
 measured TPU tire model or full articulated drivetrain.
 
-`DrivePhysicsConfig` now includes `wheelWidth` (default .0508 m),
-`contactPatchLength` (.020 m), and `contactShearDeflection` (.001 m at breakaway).
+`DrivePhysicsConfig` requires `wheelWidth`, `contactPatchLength`, and
+`contactShearDeflection` at breakaway to be supplied.
 Module truth exposes contact twist, ground torsion and combined azimuth actuator
 (steering motor plus drive coupling) torque. The patch RMS radius is
 `sqrt((width^2 + length^2)/12)`; stiffness is `mu*N*radius^2/shearDeflection`.
 Plastic return mapping limits stored shear at sliding. When normal load increases,
 carried-over twist is rescaled to preserve at most the prior shear moment, avoiding
-unmodeled spring-energy creation from a stiffness jump. The defaults are explicit
-estimates; wheel-load, speed and carpet/tread measurements are needed to calibrate.
+unmodeled spring-energy creation from a stiffness jump. These are model inputs;
+wheel-load, speed and carpet/tread measurements are needed to calibrate them.
 These added configuration/state fields change the **DrivePhysics ABI**: rebuild
 all direct owners, including the WPILib session adapter and tests, together. The
 `SimulationWorld` and base robot interfaces retain their prior layouts.
@@ -324,10 +325,6 @@ alongside CPU/build metadata. See the verification record in the season project
 for retained successful and failed evidence. Simulation acceptance does not
 establish hardware calibration, CAN timing, or physical safety.
 
-2026.0.10 lowers the estimated bumper–HDPE contact friction and rounds padded
-bumper edges while preserving the field dimensions, tire model and floor gap.
-See [bump contact validation](docs/bump-contact.md).
-
 ## Configurable robot contact
 
 Version `2026.0.13` adds reusable drivetrain tuning, footprint clearance,
@@ -344,16 +341,10 @@ The legacy adapter overload retains its rigid-contact behavior.
 `meco/sim/SimulationPose.h` provides `FloorReferencedRobotPose` with a body-local
 height offset. `meco/sim/SimulatedVision.h` provides `VisibleTags` with camera
 mount, field layout, full horizontal/vertical angles and maximum range supplied
-by the caller. These ideal geometric helpers do not model occlusion or noise;
-sensor settings and alignment policy remain application-owned.
-
-The 2026 field also exposes `ParticleFieldColliders()`, a static-box
-approximation for particle contact. Its hub walls leave the top open, unlike
-the solid chassis envelope. The WPILib adapter's `ParticleFieldContacts`
-resolves spherical particles against those boxes; use short simulation
-substeps because contact detection is discrete. Field boundaries, ramps,
-trench structures, tower and depot geometry are simplified, not a complete
-representation of the official field.
+by the caller. `meco/sim/SimulatedTagCamera.h` combines configurable tag
+visibility and an ideal observation source for one camera. Connection,
+tracking, alignment, camera mounts and calibration remain caller supplied.
+These ideal geometric helpers do not model occlusion or noise.
 
 The Base 2026.2.12 checksum snapshot in `scripts/base-2026.2.12-SHA256SUMS.json`
 is pinned to release source `660eb31` and the assembled artifact from

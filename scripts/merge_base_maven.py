@@ -10,8 +10,11 @@ from pathlib import Path
 import shutil
 
 
-def merge(base_root: Path, simulation_root: Path, expected_version: str = "2026.2.12") -> None:
+def merge(base_root: Path, simulation_root: Path, expected_version: str | None = None) -> None:
     base_descriptor = json.loads((base_root / "MecoBase.json").read_text(encoding="utf-8"))
+    expected_version = expected_version or base_descriptor.get("version")
+    if not expected_version:
+        raise ValueError("Base descriptor does not declare a version")
     if base_descriptor.get("version") != expected_version:
         raise ValueError(f"Expected Base descriptor {expected_version}, got {base_descriptor.get('version')}")
     coordinates = [dependency for dependency in base_descriptor.get("cppDependencies", [])

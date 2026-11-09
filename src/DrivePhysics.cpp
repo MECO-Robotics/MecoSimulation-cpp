@@ -50,6 +50,7 @@ void Validate(const DrivePhysicsConfig &c)
                             c.bumperHalfExtents.x,
                             c.bumperHalfExtents.y,
                             c.bumperHalfExtents.z,
+                            c.bumperWallThickness,
                             c.rideHeight,
                             c.wheelRadius,
                             c.driveRatio,
@@ -58,11 +59,14 @@ void Validate(const DrivePhysicsConfig &c)
                             c.steerInertia,
                             c.longitudinalStiffness,
                             c.lateralStiffness,
-                            c.motorResistance,
-                            c.motorKt,
-                            c.motorKv,
-                            c.driveCurrentLimit,
-                            c.steerCurrentLimit,
+                            c.driveMotor.resistanceOhms,
+                            c.driveMotor.torqueConstantNmPerAmp,
+                            c.driveMotor.velocityConstantRadPerSecPerVolt,
+                            c.driveMotor.currentLimitAmps,
+                            c.steerMotor.resistanceOhms,
+                            c.steerMotor.torqueConstantNmPerAmp,
+                            c.steerMotor.velocityConstantRadPerSecPerVolt,
+                            c.steerMotor.currentLimitAmps,
                             c.wheelWidth,
                             c.contactPatchLength,
                             c.contactShearDeflection};
@@ -70,7 +74,10 @@ void Validate(const DrivePhysicsConfig &c)
         if (!std::isfinite(x) || x <= 0)
             throw std::invalid_argument("Drive physics requires positive finite physical parameters");
     if (!Finite(c.centerOfMass) || !std::isfinite(c.couplingRatio) || !std::isfinite(c.friction) || c.friction < 0 ||
-        !std::isfinite(c.frictionVoltage) || c.frictionVoltage < 0)
+        !std::isfinite(c.bumperFriction) || c.bumperFriction < 0 ||
+        !std::isfinite(c.bumperCornerRadius) || c.bumperCornerRadius < 0 ||
+        !std::isfinite(c.driveMotor.frictionVoltage) || c.driveMotor.frictionVoltage < 0 ||
+        !std::isfinite(c.steerMotor.frictionVoltage) || c.steerMotor.frictionVoltage < 0)
         throw std::invalid_argument("Invalid drivetrain friction, coupling, or center of mass");
     for (auto p : c.moduleLocations)
         if (!Finite(p))
@@ -100,9 +107,10 @@ void DrivePhysics::CreateRobotBody()
     spec.centerOfMass = config_.centerOfMass;
     spec.halfExtents = config_.bumperHalfExtents;
     spec.shape = BodySpec::Shape::BumperRing;
-    // Nominal 3.5-inch bumper depth. Retain an opening for smaller test bodies.
-    spec.radius = std::min(.0889, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
-    spec.friction = .65;
+    // Retain an opening for bodies whose configured bumper is thinner than its envelope.
+    spec.radius = std::min(config_.bumperWallThickness, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
+    spec.cornerRadius = config_.bumperCornerRadius;
+    spec.friction = config_.bumperFriction;
     spec.planar = world_.Mode() == Backend::Planar;
     spec.pose.position.z = config_.rideHeight;
     if (contactConfig_)
@@ -372,8 +380,8 @@ void DrivePhysics::BeforePhysics(double dt)
             contact = support.active ? support.point : contact;
             normalForce = support.impulse / dt;
         }
-        const double driveV = FrictionVoltage(voltages_[i][0], c.frictionVoltage);
-        const double steerV = FrictionVoltage(voltages_[i][1], c.frictionVoltage);
+        const double driveV = FrictionVoltage(voltages_[i][0], c.driveMotor.frictionVoltage);
+        const double steerV = FrictionVoltage(voltages_[i][1], c.steerMotor.frictionVoltage);
         // Freeze a midpoint azimuth basis for this implicit substep. Wheel spin
         // and azimuth speed are solved together; neither sensor is a setpoint.
         const double angle = m.steerAngle + .5 * m.steerVelocity * dt;
@@ -397,16 +405,18 @@ void DrivePhysics::BeforePhysics(double dt)
         const double oldTwist = torsionStiffness > 0 ? m.azimuthContactTwist *
             std::min(1., m.normalForce / normalForce) : 0.;
         auto driveCurrent = [&](double wheel, double steer) {
-            return std::clamp((driveV-(c.driveRatio*wheel+c.couplingRatio*steer)/c.motorKv)/c.motorResistance,
-                              -c.driveCurrentLimit,c.driveCurrentLimit);
+            return std::clamp((driveV-(c.driveRatio*wheel+c.couplingRatio*steer)/
+                               c.driveMotor.velocityConstantRadPerSecPerVolt)/c.driveMotor.resistanceOhms,
+                              -c.driveMotor.currentLimitAmps,c.driveMotor.currentLimitAmps);
         };
         auto steerCurrent = [&](double steer) {
-            return std::clamp((steerV-c.steerRatio*steer/c.motorKv)/c.motorResistance,
-                              -c.steerCurrentLimit,c.steerCurrentLimit);
+            return std::clamp((steerV-c.steerRatio*steer/
+                               c.steerMotor.velocityConstantRadPerSecPerVolt)/c.steerMotor.resistanceOhms,
+                              -c.steerMotor.currentLimitAmps,c.steerMotor.currentLimitAmps);
         };
         auto motorTorque = [&](double wheel, double steer) {
-            return c.steerRatio*c.motorKt*steerCurrent(steer) +
-                   c.couplingRatio*c.motorKt*driveCurrent(wheel,steer);
+            return c.steerRatio*c.steerMotor.torqueConstantNmPerAmp*steerCurrent(steer) +
+                   c.couplingRatio*c.driveMotor.torqueConstantNmPerAmp*driveCurrent(wheel,steer);
         };
         auto wrench = [&](double wheel, double steer) {
             const double rolling = .5*(std::abs(wheel*c.wheelRadius)+std::abs(forward));
@@ -428,18 +438,21 @@ void DrivePhysics::BeforePhysics(double dt)
         };
         const double previousWheel=m.wheelVelocity, previousSteer=m.steerVelocity;
         auto solveWheel = [&](double steer) {
-            const double delta=dt*(c.driveRatio*c.motorKt*c.driveCurrentLimit+c.wheelRadius*maximum)/c.wheelInertia;
+            const double delta=dt*(c.driveRatio*c.driveMotor.torqueConstantNmPerAmp*
+                                   c.driveMotor.currentLimitAmps+c.wheelRadius*maximum)/c.wheelInertia;
             double lo=previousWheel-delta, hi=previousWheel+delta;
             for(int iteration=0;iteration<36;++iteration) {
                 const double wheel=(lo+hi)*.5;
                 const double residual=c.wheelInertia*(wheel-previousWheel)/dt -
-                    c.driveRatio*c.motorKt*driveCurrent(wheel,steer)+c.wheelRadius*wrench(wheel,steer)[0];
+                    c.driveRatio*c.driveMotor.torqueConstantNmPerAmp*driveCurrent(wheel,steer)+
+                    c.wheelRadius*wrench(wheel,steer)[0];
                 if(residual>0) hi=wheel; else lo=wheel;
             }
             return (lo+hi)*.5;
         };
-        const double steerDelta=dt*(c.steerRatio*c.motorKt*c.steerCurrentLimit+
-            std::abs(c.couplingRatio)*c.motorKt*c.driveCurrentLimit+maximum*patchRadius)/c.steerInertia;
+        const double steerDelta=dt*(c.steerRatio*c.steerMotor.torqueConstantNmPerAmp*
+            c.steerMotor.currentLimitAmps+std::abs(c.couplingRatio)*c.driveMotor.torqueConstantNmPerAmp*
+            c.driveMotor.currentLimitAmps+maximum*patchRadius)/c.steerInertia;
         double lo=previousSteer-steerDelta, hi=previousSteer+steerDelta;
         for(int iteration=0;iteration<36;++iteration) {
             const double steer=(lo+hi)*.5, wheel=solveWheel(steer);
@@ -509,10 +522,12 @@ double DrivePhysics::SupplyCurrent(double busVoltage) const
         const auto &m = modules_[i];
         // Restore the configured friction drop removed before the electrical solve.
         // Current limiting can still reduce terminal voltage below the request.
-        const double driveV = m.driveCurrent * config_.motorResistance + m.driveRotorVelocity / config_.motorKv +
-                              std::copysign(config_.frictionVoltage, voltages_[i][0]);
-        const double steerV = m.steerCurrent * config_.motorResistance + m.steerRotorVelocity / config_.motorKv +
-                              std::copysign(config_.frictionVoltage, voltages_[i][1]);
+        const double driveV = m.driveCurrent * config_.driveMotor.resistanceOhms +
+                              m.driveRotorVelocity / config_.driveMotor.velocityConstantRadPerSecPerVolt +
+                              std::copysign(config_.driveMotor.frictionVoltage, voltages_[i][0]);
+        const double steerV = m.steerCurrent * config_.steerMotor.resistanceOhms +
+                              m.steerRotorVelocity / config_.steerMotor.velocityConstantRadPerSecPerVolt +
+                              std::copysign(config_.steerMotor.frictionVoltage, voltages_[i][1]);
         power +=
             std::max(0., std::clamp(driveV, -std::abs(voltages_[i][0]), std::abs(voltages_[i][0])) * m.driveCurrent) +
             std::max(0., std::clamp(steerV, -std::abs(voltages_[i][1]), std::abs(voltages_[i][1])) * m.steerCurrent);
