@@ -24,6 +24,7 @@ base::sim::DrivePhysicsConfig MakePhysicsConfig(const base::DriveConfig &config)
     out.inertia = {s.rollInertia, s.pitchInertia, config.moi};
     out.centerOfMass = {s.centerOfMassX, s.centerOfMassY, s.centerOfMassZ};
     out.bumperHalfExtents = {s.bumperHalfLength, s.bumperHalfWidth, s.bumperHalfHeight};
+    out.bumperWallThickness = s.bumperWallThickness;
     out.rideHeight = s.rideHeight;
     out.wheelRadius = config.wheelRadius;
     out.driveRatio = config.driveRatio;

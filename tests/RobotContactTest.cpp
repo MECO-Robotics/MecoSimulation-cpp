@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -13,14 +14,7 @@ void Check(bool condition, const char *message)
 }
 DrivePhysicsConfig Config()
 {
-    DrivePhysicsConfig c;
-    c.mass = 67.6;
-    c.rideHeight = .0762;
-    c.centerOfMass.z = .2238;
-    c.bumperHalfExtents.z = .06985;
-    c.friction = 2.1;
-    c.moduleLocations = {{{.2794, .2794, 0}, {.2794, -.2794, 0}, {-.2794, .2794, 0}, {-.2794, -.2794, 0}}};
-    return c;
+    return DrivePhysicsConfig{};
 }
 void Floor(SimulationWorld &w)
 {
@@ -40,12 +34,12 @@ void Step(SimulationWorld &w, DrivePhysics &d, int count = 1)
 }
 void Clearance()
 {
-    for (double height : {.0254, .0762})
+    for (double height : {.03, .08})
     {
         SimulationWorld w(Backend::Full3D);
         Floor(w);
         auto c = Config();
-        RobotContactConfig contact;
+        auto contact = SyntheticRobotContactConfig();
         contact.chassisClearance = height;
         DrivePhysics d(w, c, contact);
         Step(w, d, 300);
@@ -62,12 +56,13 @@ void Clearance()
         Check(hit && std::abs(hit->position.z - (height + contact.panThickness)) < .001,
               "Pan did not follow clearance");
     }
-    auto invalid = RobotContactConfig{};
+    auto invalid = SyntheticRobotContactConfig();
     invalid.compressionStressPa[2] = 1;
     bool rejected = false;
     try
     {
-        ValidateRobotContact(invalid, .43, .43);
+        const auto drive = Config();
+        ValidateRobotContact(invalid, drive.bumperHalfExtents.x, drive.bumperHalfExtents.y);
     }
     catch (const std::invalid_argument &)
     {
@@ -79,11 +74,12 @@ double Force(double depth, double vx)
 {
     SimulationWorld w(Backend::Full3D);
     Floor(w);
+    const auto config = Config();
     BodySpec wall;
     wall.halfExtents = {.1, 2, 1};
-    wall.pose.position = {.53, 0, 1};
+    wall.pose.position = {config.bumperHalfExtents.x + wall.halfExtents.x, 0, 1};
     w.CreateBody(wall);
-    DrivePhysics d(w, Config(), RobotContactConfig{});
+    DrivePhysics d(w, config, SyntheticRobotContactConfig());
     auto state = w.ReadBody(d.Body());
     state.pose.position.x = depth;
     state.linearVelocity.x = vx;
@@ -102,19 +98,19 @@ void Compression()
     Check(approaching > deep && separating >= 0 && separating < deep,
           "Foam damping does not oppose approach/release");
     Check(Force(-.02, 0) == 0, "Separated foam attracts robot");
-    RobotContactConfig c;
+    auto c = SyntheticRobotContactConfig();
     auto a = EvaluateFoam(c, .8), b = EvaluateFoam(c, .9);
     Check(b.pressure > a.pressure && std::abs(b.pressure - a.pressure - .1 * a.tangent) < 1e-7,
           "Final slope not continued");
     // An impact into a wall must dissipate energy rather than launch the body.
     SimulationWorld w(Backend::Full3D);
     Floor(w);
+    auto config = Config();
     BodySpec wall;
     wall.halfExtents = {.1, 2, 1};
-    wall.pose.position = {.53, 0, 1};
+    wall.pose.position = {config.bumperHalfExtents.x + wall.halfExtents.x, 0, 1};
     w.CreateBody(wall);
-    auto config = Config();
-    DrivePhysics d(w, config, c);
+    DrivePhysics d(w, config, SyntheticRobotContactConfig());
     w.SetLinearVelocity(d.Body(), {1, 0, 0});
     double maxEnergy = 0;
     for (int i = 0; i < 300; ++i)
@@ -140,15 +136,16 @@ void Blocking()
     {
         SimulationWorld w(Backend::Full3D);
         Floor(w);
+        auto c = Config();
+        auto contact = SyntheticRobotContactConfig();
         BodySpec obstacle;
         obstacle.halfExtents = pan ? Vec3{.05, .05, .035} : Vec3{.05, 2, .04};
-        obstacle.pose.position = {pan ? 0. : .4, 0, obstacle.halfExtents.z};
+        obstacle.pose.position = {pan ? 0. : c.bumperHalfExtents.x - contact.noodleDiameter, 0,
+                                  obstacle.halfExtents.z};
         w.CreateBody(obstacle);
-        auto c = Config();
-        RobotContactConfig contact;
         DrivePhysics d(w, c, contact);
         auto state = w.ReadBody(d.Body());
-        state.pose.position.z = pan ? .20 : c.rideHeight;
+        state.pose.position.z = c.rideHeight;
         state.linearVelocity.x = pan ? 0 : 1;
         w.SetBodyState(d.Body(), state);
         unsigned hits = 0;
@@ -186,22 +183,23 @@ void WheelLip()
     lip.pose.position = {1, 0, .00715};
     w.CreateBody(lip);
     auto c = Config();
+    const double frontReach = c.moduleLocations[0].x;
     c.rideHeight = .3;
     c.bumperHalfExtents.z = .05;
     c.centerOfMass.z = 0;
     DrivePhysics d(w, c);
-    d.Reset({{-.2794 - .025, 0, c.rideHeight}, {}});
+    d.Reset({{-frontReach - .025, 0, c.rideHeight}, {}});
     Step(w, d, 12);
     const auto body = d.Truth().body;
     const auto q = body.pose.rotation;
-    const double frontHeight = body.pose.position.z - 2 * q.w * q.y * .2794;
+    const double frontHeight = body.pose.position.z - 2 * q.w * q.y * frontReach;
     std::cout << "front_height=" << frontHeight << " body_x=" << body.pose.position.x << '\n';
-    Check(body.pose.position.x + .2794 < 0,
+    Check(body.pose.position.x + frontReach < 0,
           "Axle already crossed the lip; regression does not test tire-leading contact");
     Check(frontHeight > c.rideHeight + .001, "Tire failed to support chassis before axle ray reached lip");
-    auto touching = RobotContactConfig{};
-    touching.backingFloorGap = .01905;
-    ValidateRobotContact(touching, .43, .43); // Exact inch-derived top boundary, including roundoff.
+    auto touching = SyntheticRobotContactConfig();
+    touching.backingFloorGap = touching.bumperFloorGap + 2 * touching.noodleDiameter - touching.backingHeight;
+    ValidateRobotContact(touching, c.bumperHalfExtents.x, c.bumperHalfExtents.y);
 }
 void DriveReaction()
 {
@@ -229,12 +227,12 @@ void DriveReaction()
 void FoamShear()
 {
     SimulationWorld w(Backend::Full3D);
+    const auto c = Config();
     BodySpec wall;
     wall.halfExtents = {.1, 2, 1};
-    wall.pose.position = {.53, 0, 1};
+    wall.pose.position = {c.bumperHalfExtents.x + wall.halfExtents.x, 0, 1};
     w.CreateBody(wall);
-    auto c = Config();
-    RobotContactConfig material;
+    auto material = SyntheticRobotContactConfig();
     DrivePhysics d(w, c, material);
     const Pose initial{{.015, 0, c.rideHeight}, {}};
     auto firstResponse = [&]()
@@ -248,7 +246,7 @@ void FoamShear()
     // Two front noodles share the projected area. An initially unstrained
     // elastic shear layer cannot immediately impose a rigid no-slip condition.
     const double normalTangent = EvaluateFoam(material, .015 / material.noodleDiameter).tangent;
-    const double totalShearStiffness = 2 * .86 * normalTangent / 2;
+    const double totalShearStiffness = 2 * (2 * c.bumperHalfExtents.y) * normalTangent / 2;
     const double maximumFirstLoss = totalShearStiffness * .004 * .004 / c.mass;
     Check(first < 1 && first >= 1 - maximumFirstLoss - 1e-5,
           "Foam instantaneously sticks instead of deforming in shear");

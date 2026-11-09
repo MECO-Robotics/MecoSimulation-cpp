@@ -26,7 +26,7 @@ class DriveScene {
     bool fieldCollidersEnabled = true;
     int feedbackLoops = 1;
     std::vector<base::sim::BodySpec> colliders;
-    RobotContactConfig contact;
+    std::optional<RobotContactConfig> contact;
     std::function<bool(const frc::Pose2d&)> clearStartingPose;
     std::function<void()> resetSensors;
   };
@@ -45,12 +45,12 @@ class DriveScene {
     const auto backend = base::sim::BackendFromEnvironment();
     const auto& physics = drive.Config().simulation;
     frc::SmartDashboard::PutNumber("FieldSimulation/GroundedBodyHeight", physics.rideHeight);
-    frc::SmartDashboard::PutNumber("FieldSimulation/BumperCornerRadius", backend == base::sim::Backend::Full3D
-        ? config_.contact.noodleDiameter / 2 : base::sim::kBumperCornerRadius);
+    frc::SmartDashboard::PutNumber("FieldSimulation/BumperCornerRadius", backend == base::sim::Backend::Full3D && config_.contact
+        ? config_.contact->noodleDiameter / 2 : base::sim::kBumperCornerRadius);
     frc::SmartDashboard::PutNumber("FieldSimulation/BumperBottomHeight", physics.rideHeight - physics.bumperHalfHeight);
     frc::SmartDashboard::PutNumber("FieldSimulation/BumperTopHeight", physics.rideHeight + physics.bumperHalfHeight);
-    auto session = backend == base::sim::Backend::Full3D
-        ? CreateDriveSimulationAdapter(drive.Config(), backend, config_.contact)
+    auto session = backend == base::sim::Backend::Full3D && config_.contact
+        ? CreateDriveSimulationAdapter(drive.Config(), backend, *config_.contact)
         : CreateDriveSimulationAdapter(drive.Config(), backend);
     if (config_.fieldCollidersEnabled) {
       auto& arena = session->CreateArena(base::sim::ArenaScene::Empty);

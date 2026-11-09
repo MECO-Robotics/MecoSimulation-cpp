@@ -1,4 +1,5 @@
 #include "base/sim/DrivePhysics.h"
+#include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -20,7 +21,7 @@ int main() {
         // of any particular FRC season's field geometry.
         constexpr double angle = 12 * 3.141592653589793 / 180;
         constexpr double run = .8;
-        constexpr double height = .17;
+        constexpr double height = .12;
         constexpr double thickness = .025;
         constexpr double centerX = 0;
         constexpr double centerY = 0;
@@ -35,26 +36,13 @@ int main() {
             world.CreateBody(ramp);
         }
         DrivePhysicsConfig c;
-        c.mass = 67.6;
-        c.friction = 2.1;
-        c.bumperHalfExtents.z = .06985;
-        c.rideHeight = .0762;
-        c.centerOfMass.z = .2238;
-        c.driveRatio = 5.8909090909090915;
-        c.steerRatio = 12.1;
-        c.couplingRatio = 4.909090909090909;
-        c.wheelInertia = c.steerInertia = .01;
-        c.motorResistance = 12. / 483;
-        c.motorKt = 9.37 / 483;
         constexpr double pi = 3.141592653589793;
-        c.motorKv = (5800 * 2 * pi / 60) / (12 - c.motorResistance * 2);
-        c.driveCurrentLimit = 50;
-        c.steerCurrentLimit = 30;
-        c.moduleLocations = {
-            {{.2794, .2794, 0}, {.2794, -.2794, 0}, {-.2794, .2794, 0}, {-.2794, -.2794, 0}}};
-        RobotContactConfig contact;
+        auto contact = SyntheticRobotContactConfig();
+        c.bumperHalfExtents.z = contact.noodleDiameter;
+        c.rideHeight = contact.bumperFloorGap + contact.noodleDiameter;
+        c.centerOfMass.z = .18;
         if (scenario == 2)
-            contact.bumperFloorGap = contact.backingFloorGap = .0127;
+            contact.bumperFloorGap = contact.backingFloorGap = .025;
         auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, contact)
                                : std::make_unique<DrivePhysics>(world, c);
         auto &drive = *plant;

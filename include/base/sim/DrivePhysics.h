@@ -11,7 +11,8 @@ struct DrivePhysicsConfig
 {
     double mass{74.088};
     Vec3 inertia{4.0, 4.0, 6.883}, centerOfMass{};
-    Vec3 bumperHalfExtents{.43, .43, .12};
+    Vec3 bumperHalfExtents{.40, .35, .10};
+    double bumperWallThickness{.05};
     double rideHeight{.30}, wheelRadius{.0508};
     double driveRatio{6.122448979591837}, steerRatio{150.0 / 7.0}, couplingRatio{};
     double wheelInertia{.025}, steerInertia{.004};

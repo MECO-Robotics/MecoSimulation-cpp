@@ -101,13 +101,14 @@ int main()
         DrivePhysics d(w, c);
         BodySpec wall;
         wall.halfExtents = {.1, 3, 1};
-        wall.pose.position = {2, 0, 1};
+        const double expectedStopX = 1.4;
+        wall.pose.position = {expectedStopX + c.bumperHalfExtents.x + wall.halfExtents.x, 0, 1};
         w.CreateBody(wall);
         for (size_t i = 0; i < 4; ++i)
             d.SetModuleVoltages(i, 12, 0);
         Step(w, d, 1000);
         auto t = d.Truth();
-        Check(t.body.pose.position.x < 1.5 && t.body.pose.position.x > 1.3);
+        Check(t.body.pose.position.x < expectedStopX + .05 && t.body.pose.position.x > expectedStopX - .05);
         Check(std::abs(t.body.linearVelocity.x) < .1 && t.modules[0].longitudinalSlip > 1);
         for (size_t i = 0; i < 4; ++i)
             d.SetModuleVoltages(i, 0, 0);

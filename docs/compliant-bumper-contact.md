@@ -1,10 +1,10 @@
 # Configurable chassis and pool-noodle contact
 
 This is an uncalibrated numerical desktop model. `RobotContactConfig` is owned by
-MecoSimulation; the season robot supplies its construction estimates through the
-three-argument `CreateDriveSimulationAdapter` overload. The existing overload
-retains rigid bumper contact. Compliance requires Full3D; the season retains its
-legacy planar fallback.
+MecoSimulation and has no implied robot construction profile. A caller supplies
+all dimensions and material estimates through the three-argument
+`CreateDriveSimulationAdapter` overload. The existing overload retains rigid
+bumper contact. Compliance requires Full3D.
 
 ## Start here
 
@@ -14,22 +14,20 @@ Trying to understand why the robot catches on a bump? Start with the foam, backi
 
 [Diagram source](visuals/contact-layers.mmd)
 
-- Put your robot’s dimensions and material estimates in `RobotContactConfig`.
+- Supply every `RobotContactConfig` field; zero-initialized profiles are invalid.
 - Full3D models foam that compresses, plus a rigid backing and pan. Those rigid parts can still catch or high-center.
 - Pressure, damping, and friction are estimates. A successful simulated crossing is not proof that the real robot will cross.
-- The older adapter overload retains rigid contact. See [Jolt simulation models](jolt-simulation.md) for the physics boundary and [bump contact](bump-contact.md) for the earlier rigid study.
+- The older adapter overload retains rigid contact. See [Jolt simulation models](jolt-simulation.md) for the physics boundary.
 
 ## Construction and frames
 
-All configured heights reference unloaded carpet. The solid pan bottom starts at
-2 inches with 1/8-inch thickness; its half-length/width are 0.3411 m. The bumper
-outer half-length/width remain 0.43 m. Two 2.75-inch noodles are stacked on each
-side, with a 0.25-inch bottom gap. The backing is 0.75-inch plywood, 5 inches
-high, with its bottom flush with the foam. Those are library defaults; the season
-uses the user-selected **0.5-inch flush foam and plywood floor gap**. Remaining
-construction values are estimates, not measurements.
-The 4-inch by 2-inch WCP X2i high-grip wheel geometry retains the existing module
-locations, tire friction estimate 2.1, motor limits and ratios.
+All configured heights reference unloaded carpet. `RobotContactConfig` carries
+the pan, foam, backing, stress curve, damping, and friction values; the caller
+must provide a complete robot profile. `DrivePhysicsConfig` carries the bumper
+envelope, wall thickness, wheel geometry, friction, motor parameters, and module
+locations. MecoSimulation supplies illustrative chassis and actuator defaults,
+not a calibrated robot model. Construction values are estimates unless measured
+for the particular robot.
 
 The pan and four plywood segments form one rigid compound on the existing robot
 body. No mass is added. Compound geometric CoM is cancelled before applying the
@@ -42,8 +40,7 @@ old rectangular outer foam shell in compliant mode.
 
 A flush plywood bottom still strikes terrain at its configured clearance. Foam
 compression cannot remove that rigid obstruction. A solid pan also permits
-high-centering. The season acceptance requires reliable upright full-stick crossing; it does not
-prove the unmeasured physical robot will cross.
+high-centering. A simulated crossing does not prove a physical robot will cross.
 
 
 Wheel support queries use the complete 4-inch by 2-inch cylinder (1 mm rounded
@@ -98,9 +95,9 @@ cover tension, tread deformation, and dynamic-piece foam contacts are not modele
 
 ## Configuration and telemetry
 
-Edit the season `RobotContacts()` factory to change construction and material
-values; restart simulation to apply them. Dashboard values are read-only reports,
-not runtime setters. Geometry is validated before creating the body. Nonfinite,
+Set construction and material values in the caller's `RobotContactConfig`;
+restart simulation to apply them. Dashboard values are read-only reports, not
+runtime setters. Geometry is validated before creating the body. Nonfinite,
 nonpositive dimensions, out-of-envelope backing/pan, and nonmonotonic curves fail
 startup. Scene reset clears applied forces and foam state.
 

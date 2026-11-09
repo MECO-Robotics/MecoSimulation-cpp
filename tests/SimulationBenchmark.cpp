@@ -1,5 +1,6 @@
 #include "base/sim/Arena.h"
 #include "base/sim/DrivePhysics.h"
+#include "TestRobotContactConfig.h"
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -21,14 +22,10 @@ int ContactBenchmark()
         world.CreateBody(floor);
         BodySpec wall;
         wall.halfExtents = {.1, 2, 1};
-        wall.pose.position = {.52, 0, 1};
-        world.CreateBody(wall);
         DrivePhysicsConfig c;
-        c.mass = 67.6;
-        c.rideHeight = .0762;
-        c.bumperHalfExtents.z = .06985;
-        c.centerOfMass.z = .2238;
-        auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, RobotContactConfig{})
+        wall.pose.position = {c.bumperHalfExtents.x + wall.halfExtents.x - .01, 0, 1};
+        world.CreateBody(wall);
+        auto plant = compliant ? std::make_unique<DrivePhysics>(world, c, SyntheticRobotContactConfig())
                                : std::make_unique<DrivePhysics>(world, c);
         std::vector<double> samples;
         samples.reserve(5000);

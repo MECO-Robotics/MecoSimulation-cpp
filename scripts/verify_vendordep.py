@@ -12,8 +12,8 @@ import zipfile
 from simulation_headers import validate_simulation_header_names
 from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
-VERSION = "2026.0.22-beta.1"
-BASE_VERSION = "2026.2.17-beta.1"
+VERSION = "2026.0.23-beta.1"
+BASE_VERSION = "2026.2.17-beta.4"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
 CLASSIFIERS = ("linuxx86-64",)
 

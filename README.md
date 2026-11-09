@@ -79,10 +79,10 @@ coordinates. Production checks validate the deployed package and public
 consumer links. A skipped or failed check remains unverified.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. The current prerelease package requires Base 2026.2.17-beta.1 and Simulation
-2026.0.22-beta.1. This pair rebuilds the adapter for the configurable control-timing
-and CAN-rate APIs; use these matching packages together rather than mixing the
-new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
+2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.4 and MECO
+Simulation 2026.0.23-beta.1. It includes explicit robot contact profiles and
+generic bumper dimensions; use these matching packages together rather than
+mixing the new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
 from electrical motor inversion and are applied once when Phoenix simulation
 starts. Public consumer checks use the matching Base vendordep; Base and Simulation remain separate published vendordeps.
@@ -198,7 +198,7 @@ travel or static sag. The 1 cm query margin and 0.1 mm penetration slop are
 numerical contact tolerances, not physical compliance. Longitudinal/lateral tire
 forces are capped by the solved normal reactions. Motor current and wheel inertia
 affect acceleration; forces act at contact points. The bumper is one rigid body with four compound box segments forming a hollow
-perimeter (nominal 3.5-inch depth, reduced for very small test bodies). Its centre
+perimeter whose envelope and wall thickness come from `DrivePhysicsConfig`. Its centre
 and half-height come from body ride height and bumper half extents; configure
 these together with the relative CoM to preserve the intended world CoM height.
 The shell contacts ground, slopes and obstacles through Jolt, independently of
@@ -322,10 +322,6 @@ Review p99 and individual misses, configuration, contacts, and body counts
 alongside CPU/build metadata. See the verification record in the season project
 for retained successful and failed evidence. Simulation acceptance does not
 establish hardware calibration, CAN timing, or physical safety.
-
-2026.0.10 lowers the estimated bumper–HDPE contact friction and rounds padded
-bumper edges while preserving the field dimensions, tire model and floor gap.
-See [bump contact validation](docs/bump-contact.md).
 
 ## Configurable robot contact
 

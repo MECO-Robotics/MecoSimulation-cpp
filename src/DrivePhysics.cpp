@@ -50,6 +50,7 @@ void Validate(const DrivePhysicsConfig &c)
                             c.bumperHalfExtents.x,
                             c.bumperHalfExtents.y,
                             c.bumperHalfExtents.z,
+                            c.bumperWallThickness,
                             c.rideHeight,
                             c.wheelRadius,
                             c.driveRatio,
@@ -100,8 +101,8 @@ void DrivePhysics::CreateRobotBody()
     spec.centerOfMass = config_.centerOfMass;
     spec.halfExtents = config_.bumperHalfExtents;
     spec.shape = BodySpec::Shape::BumperRing;
-    // Nominal 3.5-inch bumper depth. Retain an opening for smaller test bodies.
-    spec.radius = std::min(.0889, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
+    // Retain an opening for bodies whose configured bumper is thinner than its envelope.
+    spec.radius = std::min(config_.bumperWallThickness, std::min(spec.halfExtents.x, spec.halfExtents.y)*.5);
     spec.friction = .65;
     spec.planar = world_.Mode() == Backend::Planar;
     spec.pose.position.z = config_.rideHeight;
