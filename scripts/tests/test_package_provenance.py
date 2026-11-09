@@ -34,7 +34,7 @@ def retained_core(platform):
 
 class PackageProvenanceTest(unittest.TestCase):
     def test_rejects_stale_libraries_even_when_platforms_agree(self):
-        platform = {"baseVendordepVersion": "2026.2.12", "baseCommit": "base",
+        platform = {"baseVendordepVersion": "2026.2.17-beta.1", "baseCommit": "base",
                     "simulationCommit": "old", "baseWorkingTreeClean": True,
                     "simulationWorkingTreeClean": True, "buildMode": "reused-pinned-core",
                     "coreBuild": None}
@@ -50,7 +50,7 @@ class PackageProvenanceTest(unittest.TestCase):
         trees = {path: subprocess.check_output(["git", "rev-parse", f"HEAD:{path}"], cwd=root, text=True).strip()
                  for path in ("CMakeLists.txt", "include", "src", "tests")}
         record = {
-            "baseVendordepVersion": "2026.2.12",
+            "baseVendordepVersion": "2026.2.17-beta.1",
             "baseCommit": "base",
             "simulationCommit": commit,
             "baseWorkingTreeClean": True,

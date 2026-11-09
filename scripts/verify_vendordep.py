@@ -12,7 +12,8 @@ import zipfile
 from simulation_headers import validate_simulation_header_names
 from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
-VERSION = "2026.0.21"
+VERSION = "2026.0.22-beta.1"
+BASE_VERSION = "2026.2.17-beta.1"
 COORDINATE = Path("com/mecorobotics/sim/meco-simulation-wpilib-cpp") / VERSION
 CLASSIFIERS = ("linuxx86-64",)
 
@@ -78,7 +79,7 @@ def main() -> None:
             raise SystemExit(f"Checksum mismatch for {artifact}")
     provenance = manifest.get("buildProvenance", {})
     if not args.platform and (set(provenance) != set(CLASSIFIERS) or
-                              any(item.get("baseVendordepVersion") != "2026.2.12" for item in provenance.values())):
+                              any(item.get("baseVendordepVersion") != BASE_VERSION for item in provenance.values())):
         raise SystemExit("Full package lacks its Linux build or split Base provenance")
     for platform, item in provenance.items():
         if item.get("buildMode") == "reused-published-binary":

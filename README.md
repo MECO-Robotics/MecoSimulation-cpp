@@ -60,10 +60,10 @@ build tools, and CMake installed, run
 then `python3 scripts/build_local_release.py assemble --base-root <base-checkout>`.
 The packager validates the local build provenance and writes `build/vendor-maven`.
 
-Before the next release, update the descriptor version and `jsonUrl` and the
-package and verifier version constants together. Use a new immutable version and
-tag; do not republish the existing 2026.0.21 coordinate with the changed platform
-list.
+For each release, keep the descriptor version and `jsonUrl`, package and
+verifier version constants, and compatible Base version in provenance checks in
+sync. Use a new immutable version and tag; the existing 2026.0.21 coordinate
+remains unchanged.
 
 Create a release tag for the same commit, then package and attach the local
 Maven tree to a GitHub release (creating the release itself is a separate step):
@@ -79,8 +79,8 @@ coordinates. Production checks validate the deployed package and public
 consumer links. A skipped or failed check remains unverified.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
-2026.0.10. The current package requires Base 2026.2.12 and Simulation
-2026.0.21. This pair rebuilds the adapter for the configurable control-timing
+2026.0.10. The current prerelease package requires Base 2026.2.17-beta.1 and Simulation
+2026.0.22-beta.1. This pair rebuilds the adapter for the configurable control-timing
 and CAN-rate APIs; use these matching packages together rather than mixing the
 new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct

@@ -17,7 +17,8 @@ from simulation_headers import collect_simulation_headers, validate_simulation_h
 from reuse_simulation_core import verify_retained_core_provenance
 from reuse_published_binary import verify_provenance as verify_reused_binary, ARCHIVES
 
-VERSION = "2026.0.21"
+VERSION = "2026.0.22-beta.1"
+BASE_VERSION = "2026.2.17-beta.1"
 GROUP_PATH = Path("com/mecorobotics/sim")
 PLATFORMS = {
     "linuxx86-64": ("linux/x86-64", "libmecoSimAdapter.a", ("libfrc_jolt.a", "libJolt.a")),
@@ -31,7 +32,7 @@ def validate_build_provenance(build_provenance: dict, source_commit: str, releas
     expected_base = {item.get("baseVendordepVersion") for item in build_provenance.values()}
     expected_base_commit = {item.get("baseCommit") for item in build_provenance.values()}
     expected_sim_commit = {item.get("simulationCommit") for item in build_provenance.values()}
-    if (expected_base != {"2026.2.12"} or len(expected_base_commit) != 1 or
+    if (expected_base != {BASE_VERSION} or len(expected_base_commit) != 1 or
             None in expected_base_commit or expected_sim_commit != {source_commit}):
         raise ValueError("Platform builds must use the pinned Base version and matching source commits")
     if release and any(
