@@ -78,6 +78,11 @@ The publication job verifies the package and preserves existing Maven
 coordinates. Production checks validate the deployed package and public
 consumer links. A skipped or failed check remains unverified.
 
+For prereleases published through the raw Maven branch, use
+`publish-raw-maven.yml`. It adds only the new Simulation coordinate to the
+`maven-repository` branch and avoids rebuilding the full Pages site. Keep the
+Pages publication workflow for production releases.
+
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.5 and MECO
 Simulation 2026.0.23-beta.2. It includes explicit robot contact profiles and
