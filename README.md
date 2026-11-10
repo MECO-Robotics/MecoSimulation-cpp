@@ -85,7 +85,7 @@ Pages publication workflow for production releases.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.5 and MECO
-Simulation 2026.0.23-beta.3. It includes explicit robot contact profiles and
+Simulation 2026.0.23-beta.4. It includes explicit robot contact profiles and
 generic bumper dimensions; use these matching packages together rather than
 mixing the new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
@@ -133,8 +133,10 @@ forces on that body.
 
 2026.0.9 adds hard-mounted contact, bumper rings, load-dependent azimuth, battery
 support and diagnostics. `DriveSimulationSession::PhysicsTruth()` exposes complete
-body orientation/contact loads without adding fields to the Base ABI. Field maps
-helpers are public `meco/sim` headers. Season field geometry stays in the consuming robot project. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
+body orientation/contact loads without adding fields to the Base ABI. Reusable
+2026 field dimensions and simplified collision bodies are in the public
+`meco/sim/Field2026.h` adapter API. Robot footprint, placement, and season policy
+stay in the consuming project. Release 2026.0.9 passed its cross-platform package and public-Maven gates;
 see the [release validation](docs/releases/2026.0.9.md).
 
 ## Native AutoDrive and practice control
@@ -313,8 +315,9 @@ The generic 16 m by 8 m arena uses a fixed blue-corner origin with bounds
 `[0,16] × [0,8]` metres: +X downfield, +Y left, +Z up, and positive yaw
 counterclockwise. Physical colliders and pieces share this frame. `Arena::Reset(seed)`
 recreates pieces and clears intake state; `SimulationClock::Reset()` resets
-registered plants and time. Season-specific field geometry and robot placement
-belong in the consuming robot project.
+registered plants and time. The 2026 WPILib adapter also exports its reusable
+field dimensions and simplified field colliders. Robot dimensions, placement,
+and season-specific policy stay in the consuming robot project.
 
 ## Timing and evidence
 

@@ -2,6 +2,13 @@
 
 This folder builds the optional Drive bridge as a static C++ library against the pinned WPILib 2026 toolchain and the matching MECO Base public headers. The workflow checks both Debug and Release on Linux and Windows. The bridge only becomes a supported vendordep artifact after clean Base plus Simulation consumer links pass on both targets.
 
+`meco/sim/Field2026.h` provides the shared 2026 field dimensions and simplified
+collision bodies in fixed blue-origin metre coordinates. `FieldColliders()`
+returns solid geometry for robot contact and navigation; `ParticleFieldColliders()`
+uses hollow hub walls so fuel can pass through the goal opening. Field/game
+geometry is versioned with the 2026 simulation adapter, while each robot keeps
+its own footprint, spawn policy, and game behavior.
+
 `meco/sim/BatterySupply.h` provides opt-in shared battery sag. Call
 `UpdateBatterySupply(runtime)` once after the shared runtime's robot period. It
 uses aggregate battery-side supply current, sets the runtime bus and roboRIO
@@ -60,7 +67,8 @@ simulated Driver Station packet updates while replay is active.
 `RobotSimulationRuntime.h` coordinates `SimulationLifecycle`, `DriveScene`,
 and optional `DriverInputTelemetry` at those same callbacks. The application
 supplies drive-scene configuration and continues to own game simulation,
-field geometry, localization policy, and reset decisions.
+robot localization policy, and reset decisions. The 2026 adapter's shared
+field dimensions and collider model are exposed by `Field2026.h`.
 
 `SimulationPower.h` adds optional charge integration, brownout counting and
 power/physics-clock telemetry on top of the battery supply helper. Construct
