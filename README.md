@@ -85,7 +85,7 @@ Pages publication workflow for production releases.
 
 The published release setup used MECO Base 2026.2.1 followed by MECO Simulation
 2026.0.10. The current prerelease pair is MECO Base 2026.2.17-beta.5 and MECO
-Simulation 2026.0.23-beta.4. It includes explicit robot contact profiles and
+Simulation 2026.0.23-beta.5. It includes explicit robot contact profiles and
 generic bumper dimensions; use these matching packages together rather than
 mixing the new Base layout with an older Simulation binary. Configure each module's physical drive, steer, and encoder mounting
 directions through Base simulation configuration. These settings are distinct
@@ -112,10 +112,12 @@ python3 scripts/consumer_smoke.py --target desktop --configuration Release \
 
 MecoBase owns robot control, hardware IO and the Jolt-free shared motor runtime.
 MecoSimulation owns physics/contact solvers, Jolt, the WPILib bridge, diagnostics,
-shared battery helper, pose-reference transforms, ideal AprilTag visibility and pose observations, and drivetrain tuning estimates. Applications own hardware
-parameters, commands, robot-specific game-piece behavior, starting-pose policy and
-telemetry presentation. Applications must not copy `base/sim` headers or replace
-Simulation archive objects.
+shared battery helper, pose-reference transforms, ideal AprilTag visibility and
+pose observations, drivetrain tuning estimates, and the configurable 2026 FUEL
+model. Applications own hardware parameters, commands, robot-specific model
+configuration, match policy, starting-pose policy, and telemetry presentation.
+Applications must not copy `base/sim` headers or replace Simulation archive
+objects.
 
 `base/sim/SimulationTuning.h` estimates initial proportional drive gains from
 a current and traction limited stopping envelope. The application supplies the
@@ -316,8 +318,9 @@ The generic 16 m by 8 m arena uses a fixed blue-corner origin with bounds
 counterclockwise. Physical colliders and pieces share this frame. `Arena::Reset(seed)`
 recreates pieces and clears intake state; `SimulationClock::Reset()` resets
 registered plants and time. The 2026 WPILib adapter also exports its reusable
-field dimensions and simplified field colliders. Robot dimensions, placement,
-and season-specific policy stay in the consuming robot project.
+field dimensions, simplified field colliders, and configurable FUEL model.
+Robot dimensions, mechanism geometry, placement, and match-specific policy stay
+in the consuming robot project.
 
 ## Timing and evidence
 
