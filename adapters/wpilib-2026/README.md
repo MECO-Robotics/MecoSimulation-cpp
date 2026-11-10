@@ -6,8 +6,11 @@ This folder builds the optional Drive bridge as a static C++ library against the
 collision bodies in fixed blue-origin metre coordinates. `FieldColliders()`
 returns solid geometry for robot contact and navigation; `ParticleFieldColliders()`
 uses hollow hub walls so fuel can pass through the goal opening. Field/game
-geometry is versioned with the 2026 simulation adapter, while each robot keeps
-its own footprint, spawn policy, and game behavior.
+geometry is versioned with the 2026 simulation adapter. `RampTerrain()` and
+`RampBoundaries()` provide traversable grade and segment-crossing data for the
+hub ramps, while `RampObstacles(paddingMetres)` returns plan-view avoidance
+rectangles. Each robot still supplies its own footprint, spawn policy, and
+clearance margin.
 
 `meco/sim/FuelModel.h` provides the shared 2026 FUEL particle lifecycle,
 including hopper packing, collection, burst launching, field and robot contact,

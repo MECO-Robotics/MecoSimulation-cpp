@@ -1,5 +1,9 @@
 #pragma once
 
+#include "meco/sim/ColliderNavigation.h"
+
+#include <base/FootprintClearance.h>
+#include <base/FootprintSpeedProfile.h>
 #include <base/sim/SimulationWorld.h>
 
 #include <vector>
@@ -22,5 +26,11 @@ std::vector<base::sim::BodySpec> FieldColliders();
 
 // Particle geometry retains an open hub top, unlike the solid chassis envelope.
 std::vector<base::sim::BodySpec> ParticleFieldColliders();
+
+// Traversable terrain and plan-view avoidance geometry for the four 2026 hub
+// ramps. Padding expands each avoidance rectangle in metres.
+std::vector<double> RampBoundaries(base::FootprintPose from, base::FootprintPose to);
+base::FootprintTerrainSegment RampTerrain(base::FootprintPose from, base::FootprintPose to);
+std::vector<ColliderRectangle> RampObstacles(double paddingMetres);
 
 }  // namespace meco::sim::field2026

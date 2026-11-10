@@ -1,10 +1,18 @@
 #include "meco/sim/Field2026.h"
 
+#include "base/sim/ColliderTerrain.h"
+
 #include <cmath>
 #include <numbers>
+#include <stdexcept>
 
 namespace meco::sim::field2026 {
 namespace {
+
+const std::vector<base::sim::PitchedPlateTerrain>& Ramps() {
+  static const auto ramps = base::sim::PitchedPlateTerrains(FieldColliders());
+  return ramps;
+}
 
 constexpr double In(double value) { return value * .0254; }
 
@@ -112,6 +120,27 @@ std::vector<base::sim::BodySpec> ParticleFieldColliders() {
   }
 
   return bodies;
+}
+
+std::vector<double> RampBoundaries(base::FootprintPose from, base::FootprintPose to) {
+  return base::sim::TerrainBoundaries(Ramps(), from.x, from.y, to.x, to.y);
+}
+
+base::FootprintTerrainSegment RampTerrain(base::FootprintPose from, base::FootprintPose to) {
+  return {base::sim::TerrainGrade(Ramps(), from.x, from.y, to.x, to.y), 0};
+}
+
+std::vector<ColliderRectangle> RampObstacles(double paddingMetres) {
+  if (!std::isfinite(paddingMetres) || paddingMetres < 0) {
+    throw std::invalid_argument("Ramp obstacle padding must be finite and nonnegative");
+  }
+  std::vector<ColliderRectangle> obstacles;
+  obstacles.reserve(Ramps().size());
+  for (const auto& ramp : Ramps()) {
+    obstacles.push_back({ramp.minX - paddingMetres, ramp.minY - paddingMetres,
+                         ramp.maxX + paddingMetres, ramp.maxY + paddingMetres});
+  }
+  return obstacles;
 }
 
 }  // namespace meco::sim::field2026
