@@ -9,6 +9,13 @@ uses hollow hub walls so fuel can pass through the goal opening. Field/game
 geometry is versioned with the 2026 simulation adapter, while each robot keeps
 its own footprint, spawn policy, and game behavior.
 
+`meco/sim/FuelModel.h` provides the shared 2026 FUEL particle lifecycle,
+including hopper packing, collection, burst launching, field and robot contact,
+and hub-crossing detection. Supply a `FuelModelConfig` for the robot's bumper,
+hopper, intake, shooter, and feed timing. The caller supplies measured robot
+state and decides whether a hub crossing is score-eligible; mechanism IO,
+motor-load feedback, match-state policy, and telemetry remain in the robot.
+
 `meco/sim/BatterySupply.h` provides opt-in shared battery sag. Call
 `UpdateBatterySupply(runtime)` once after the shared runtime's robot period. It
 uses aggregate battery-side supply current, sets the runtime bus and roboRIO

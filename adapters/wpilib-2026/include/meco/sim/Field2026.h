@@ -13,6 +13,7 @@ inline constexpr double kBlueHubX = 4.6256194;
 inline constexpr double kRedHubX = 11.9154194;
 inline constexpr double kHubY = 4.0346376;
 inline constexpr double kStartingLineX = kBlueHubX - .5969;
+inline constexpr double kHubOpeningHeightMetres = 72 * .0254;
 
 // Estimated HDPE sliding friction used by the bump contact model.
 inline constexpr double kBumpContactFriction = .010;
