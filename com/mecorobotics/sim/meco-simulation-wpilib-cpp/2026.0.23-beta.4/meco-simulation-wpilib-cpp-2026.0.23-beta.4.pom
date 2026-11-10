@@ -1,0 +1,1 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>com.mecorobotics.sim</groupId><artifactId>meco-simulation-wpilib-cpp</artifactId><version>2026.0.23-beta.4</version><packaging>pom</packaging></project>
